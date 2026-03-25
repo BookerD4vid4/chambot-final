@@ -76,7 +76,11 @@ const getById = async (id) => {
              WHERE p.product_id = $1`, [id]
         ),
         db.query(
-            'SELECT * FROM product_variants WHERE product_id = $1 ORDER BY is_main DESC, variant_id ASC', [id]
+            `SELECT *,
+                    GREATEST(0, stock_quantity - reserved_quantity) AS stock_quantity
+             FROM product_variants
+             WHERE product_id = $1
+             ORDER BY is_main DESC, variant_id ASC`, [id]
         )
     ]);
     if (pr.rows.length === 0) return null;
@@ -246,11 +250,6 @@ const remove = async (id) => {
         // Delete from carts
         await db.query(
             `DELETE FROM cart_items WHERE variant_id IN (SELECT variant_id FROM product_variants WHERE product_id = $1)`, [id]
-        );
-
-        // Delete stock reservations
-        await db.query(
-            `DELETE FROM stock_reservations WHERE variant_id IN (SELECT variant_id FROM product_variants WHERE product_id = $1)`, [id]
         );
 
         // Delete inventory transactions (history of stock)

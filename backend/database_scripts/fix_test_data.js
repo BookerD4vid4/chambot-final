@@ -7,7 +7,7 @@ const pool = new Pool({
 async function fix() {
   try {
     console.log('Setting province to Samut Prakan...');
-    await pool.query("UPDATE delivery_settings SET province = 'Samut Prakan', is_locked = true, amphoe = NULL, tambon = NULL, postal_code = NULL WHERE id = 1");
+    await pool.query("UPDATE delivery_settings SET province = 'Samut Prakan', is_locked = true, district = NULL, tambon = NULL, postal_code = NULL WHERE id = 1");
     console.log('Fix successful!');
     process.exit(0);
   } catch (err) {

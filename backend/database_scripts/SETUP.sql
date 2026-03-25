@@ -7,7 +7,6 @@
 -- ════════════════════════════════════════
 
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- ════════════════════════════════════════
 -- SECTION 2: ENUM TYPES
@@ -54,7 +53,6 @@ CREATE TABLE IF NOT EXISTS public.user_addresses (
     user_id         INT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     recipient_name  VARCHAR(255) NOT NULL,
     address_line    TEXT NOT NULL,
-    district        VARCHAR(150),
     province        VARCHAR(150),
     postal_code     VARCHAR(20),
     is_default      BOOLEAN DEFAULT false,
@@ -164,18 +162,6 @@ CREATE TABLE IF NOT EXISTS public.inventory_transactions (
     created_at          TIMESTAMPTZ DEFAULT now()
 );
 
--- 3.11 STOCK RESERVATIONS
-CREATE TABLE IF NOT EXISTS public.stock_reservations (
-    reservation_id  INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    order_id        INT NOT NULL REFERENCES public.orders(order_id) ON DELETE CASCADE,
-    variant_id      INT NOT NULL REFERENCES public.product_variants(variant_id) ON DELETE RESTRICT,
-    quantity        INT NOT NULL CHECK (quantity > 0),
-    expires_at      TIMESTAMPTZ NOT NULL DEFAULT now() + INTERVAL '15 minutes',
-    released_at     TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(order_id, variant_id)
-);
-
 -- 3.12 PRODUCT EMBEDDINGS
 CREATE TABLE IF NOT EXISTS public.product_embeddings (
     product_id  INT PRIMARY KEY REFERENCES public.products(product_id) ON DELETE CASCADE,
@@ -183,22 +169,6 @@ CREATE TABLE IF NOT EXISTS public.product_embeddings (
     text_used   TEXT,
     updated_at  TIMESTAMPTZ DEFAULT now()
 );
-
--- 3.13 DELIVERY SETTINGS
-CREATE TABLE IF NOT EXISTS public.delivery_settings (
-    id              INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    province        VARCHAR(150),
-    district        VARCHAR(150),
-    tambon          VARCHAR(150),
-    postal_code     VARCHAR(20),
-    is_locked       BOOLEAN DEFAULT false,
-    created_at      TIMESTAMPTZ DEFAULT now(),
-    updated_at      TIMESTAMPTZ DEFAULT now()
-);
-
--- seed a default row if none exists
-INSERT INTO public.delivery_settings (is_locked)
-SELECT false WHERE NOT EXISTS (SELECT 1 FROM public.delivery_settings);
 
 -- ════════════════════════════════════════
 -- SECTION 4: TRIGGERS
@@ -216,7 +186,7 @@ DO $$ DECLARE
     t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
-        'users','categories','products','product_variants','carts','orders','delivery_settings'
+        'users','categories','products','product_variants','carts','orders'
     ] LOOP
         EXECUTE format(
             'CREATE TRIGGER trg_updated_at
@@ -227,62 +197,6 @@ BEGIN
     END LOOP;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
-
--- ════════════════════════════════════════
--- SECTION 5: FUNCTIONS
--- ════════════════════════════════════════
-
--- 5.1 Release expired stock reservations
-CREATE OR REPLACE FUNCTION release_expired_reservations()
-RETURNS void LANGUAGE plpgsql AS $$
-BEGIN
-    UPDATE public.product_variants pv
-    SET reserved_quantity = reserved_quantity - sub.total
-    FROM (
-        SELECT variant_id, SUM(quantity) AS total
-        FROM public.stock_reservations
-        WHERE expires_at < now()
-          AND released_at IS NULL
-        GROUP BY variant_id
-    ) sub
-    WHERE pv.variant_id = sub.variant_id;
-
-    UPDATE public.stock_reservations
-    SET released_at = now()
-    WHERE expires_at < now()
-      AND released_at IS NULL;
-END;
-$$;
-
--- 5.2 Semantic search helper
-CREATE OR REPLACE FUNCTION search_products_by_embedding(
-    query_embedding vector(768),
-    match_count     INT DEFAULT 10
-)
-RETURNS TABLE (
-    product_id  INT,
-    similarity  FLOAT
-)
-LANGUAGE sql STABLE AS $$
-    SELECT
-        pe.product_id,
-        1 - (pe.embedding <=> query_embedding) AS similarity
-    FROM public.product_embeddings pe
-    JOIN public.products p ON p.product_id = pe.product_id
-    WHERE p.is_active = true
-    ORDER BY pe.embedding <=> query_embedding
-    LIMIT match_count;
-$$;
-
--- ════════════════════════════════════════
--- SECTION 6: CRON JOB
--- ════════════════════════════════════════
-
-SELECT cron.schedule(
-    'release-expired-reservations',
-    '*/5 * * * *',
-    'SELECT release_expired_reservations()'
-);
 
 -- ════════════════════════════════════════
 -- SECTION 7: VIEWS

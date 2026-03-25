@@ -34,6 +34,7 @@ app.use("/api/orders", require("./routes/orderRoutes"));
 app.use("/api/auth", authRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/delivery-settings", deliveryRoutes);
+app.use("/api/cart", require("./routes/cartRoutes"));
 
 // Admin Routes (all require requireAdmin middleware via their router files)
 app.use("/api/admin/products", require("./routes/adminProductRoutes"));

@@ -13,7 +13,7 @@ const STATUS_CONFIG = {
     cancelled: { label: 'ยกเลิกออร์เดอร์', color: '#ef4444', bg: 'rgba(239,68,68,0.15)'   },
 };
 
-const EMPTY_ADDR = { recipient_name: '', address_line: '', province: '', amphoe: '', tambon: '', postal_code: '' };
+const EMPTY_ADDR = { recipient_name: '', address_line: '', district: '', province: '', postal_code: '' };
 
 export default function CustomerProfilePage() {
     const { user, token, loginWithToken, isAdmin } = useAuth();
@@ -44,8 +44,6 @@ export default function CustomerProfilePage() {
     const isAddressAllowed = (addr, settings) => {
         if (!settings || !settings.is_locked) return true;
         if (settings.province && addr.province !== settings.province) return false;
-        if (settings.amphoe && addr.amphoe !== settings.amphoe) return false;
-        if (settings.tambon && addr.tambon !== settings.tambon) return false;
         if (settings.postal_code && addr.postal_code !== settings.postal_code) return false;
         return true;
     };
@@ -104,8 +102,6 @@ export default function CustomerProfilePage() {
             setNewAddr(deliverySettings?.is_locked ? {
                 ...EMPTY_ADDR,
                 province: deliverySettings.province,
-                amphoe: deliverySettings.amphoe,
-                tambon: deliverySettings.tambon,
                 postal_code: deliverySettings.postal_code,
             } : EMPTY_ADDR);
             setShowAdd(false);
@@ -121,9 +117,8 @@ export default function CustomerProfilePage() {
         setEditForm({
             recipient_name: addr.recipient_name,
             address_line: addr.address_line,
+            district: addr.district || '',
             province: addr.province || '',
-            amphoe: addr.amphoe || '',
-            tambon: addr.tambon || '',
             postal_code: addr.postal_code || ''
         });
     };
@@ -206,8 +201,6 @@ export default function CustomerProfilePage() {
                                 setNewAddr({
                                     ...EMPTY_ADDR,
                                     province: deliverySettings.province,
-                                    amphoe: deliverySettings.amphoe,
-                                    tambon: deliverySettings.tambon,
                                     postal_code: deliverySettings.postal_code,
                                 });
                             } else {
@@ -226,22 +219,15 @@ export default function CustomerProfilePage() {
                                 <input placeholder="รหัสไปรษณีย์" maxLength={5} value={newAddr.postal_code} onChange={e => setNewAddr(p => ({ ...p, postal_code: e.target.value.replace(/\D/g, '') }))} disabled={deliverySettings?.is_locked} />
                                 <textarea rows={2} placeholder="ที่อยู่ บ้านเลขที่ ซอย ถนน *" value={newAddr.address_line} onChange={e => setNewAddr(p => ({ ...p, address_line: e.target.value }))} style={{ gridColumn: '1/-1' }} />
                                 <input 
+                                    placeholder="อำเภอ" 
+                                    value={newAddr.district} 
+                                    onChange={e => setNewAddr(p => ({ ...p, district: e.target.value }))} 
+                                />
+                                <input 
                                     placeholder="จังหวัด" 
                                     value={newAddr.province} 
                                     onChange={e => setNewAddr(p => ({ ...p, province: e.target.value }))} 
                                     disabled={deliverySettings?.is_locked && !!deliverySettings.province} 
-                                />
-                                <input 
-                                    placeholder="อำเภอ" 
-                                    value={newAddr.amphoe} 
-                                    onChange={e => setNewAddr(p => ({ ...p, amphoe: e.target.value }))} 
-                                    disabled={deliverySettings?.is_locked && !!deliverySettings.amphoe} 
-                                />
-                                <input 
-                                    placeholder="ตำบล" 
-                                    value={newAddr.tambon} 
-                                    onChange={e => setNewAddr(p => ({ ...p, tambon: e.target.value }))} 
-                                    disabled={deliverySettings?.is_locked && !!deliverySettings.tambon} 
                                 />
                             </div>
                             <div className="profile-addr-actions">
@@ -263,22 +249,15 @@ export default function CustomerProfilePage() {
                                         <input placeholder="รหัสไปรษณีย์" maxLength={5} value={editForm.postal_code} onChange={e => setEditForm(p => ({ ...p, postal_code: e.target.value.replace(/\D/g, '') }))} disabled={deliverySettings?.is_locked} />
                                         <textarea rows={2} placeholder="ที่อยู่ *" value={editForm.address_line} onChange={e => setEditForm(p => ({ ...p, address_line: e.target.value }))} style={{ gridColumn: '1/-1' }} />
                                         <input 
+                                            placeholder="อำเภอ" 
+                                            value={editForm.district} 
+                                            onChange={e => setEditForm(p => ({ ...p, district: e.target.value }))} 
+                                        />
+                                        <input 
                                             placeholder="จังหวัด" 
                                             value={editForm.province} 
                                             onChange={e => setEditForm(p => ({ ...p, province: e.target.value }))} 
                                             disabled={deliverySettings?.is_locked && !!deliverySettings.province} 
-                                        />
-                                        <input 
-                                            placeholder="อำเภอ" 
-                                            value={editForm.amphoe} 
-                                            onChange={e => setEditForm(p => ({ ...p, amphoe: e.target.value }))} 
-                                            disabled={deliverySettings?.is_locked && !!deliverySettings.amphoe} 
-                                        />
-                                        <input 
-                                            placeholder="ตำบล" 
-                                            value={editForm.tambon} 
-                                            onChange={e => setEditForm(p => ({ ...p, tambon: e.target.value }))} 
-                                            disabled={deliverySettings?.is_locked && !!deliverySettings.tambon} 
                                         />
                                     </div>
                                     <div className="profile-addr-actions">
@@ -294,9 +273,9 @@ export default function CustomerProfilePage() {
                                             {!isAddressAllowed(addr, deliverySettings) && <span className="addr-invalid-badge">นอกเขตจัดส่ง</span>}
                                         </div>
                                         <span className="profile-addr-line">{addr.address_line}</span>
-                                        {(addr.province || addr.postal_code) && (
+                                        {(addr.district || addr.province || addr.postal_code) && (
                                             <span className="profile-addr-sub">
-                                                {[addr.province, addr.amphoe, addr.tambon, addr.postal_code].filter(Boolean).join(' ')}
+                                                {[addr.district, addr.province, addr.postal_code].filter(Boolean).join(' ')}
                                             </span>
                                         )}
                                         {!isAddressAllowed(addr, deliverySettings) && (

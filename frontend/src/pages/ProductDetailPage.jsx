@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart, Package, Tag, CheckCircle, AlertTriangle } from 'lucide-react';
-import { getProductById, getImageUrl } from '../api';
+import { ArrowLeft, ShoppingCart, Package, Tag } from 'lucide-react';
+import { getProductById } from '../api';
 import ProductImage from '../components/ProductImage';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +45,15 @@ const ProductDetailPage = () => {
             return;
         }
         if (!selectedVariant) return;
+        const availableStock = selectedVariant.stock_quantity ?? 0;
+        if (availableStock <= 0) {
+            toast.error('สินค้าหมดสต็อก');
+            return;
+        }
+        if (qty > availableStock) {
+            toast.error(`คงเหลือสินค้าเพียง ${availableStock} ชิ้น`);
+            return;
+        }
         addItem(product, selectedVariant, qty);
         toast.success(`เพิ่ม ${product.name} ลงตะกร้าแล้ว!`, {
             style: { background: '#1f2937', color: '#f9fafb', border: '1px solid #10b981' }
@@ -76,6 +85,7 @@ const ProductDetailPage = () => {
     );
 
     const inStock = selectedVariant?.stock_quantity > 0;
+    const maxQty = selectedVariant?.stock_quantity ?? 0;
 
     return (
         <div className="page-wrapper">
@@ -150,7 +160,11 @@ const ProductDetailPage = () => {
                             <div className="qty-selector">
                                 <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
                                 <span>{qty}</span>
-                                <button onClick={() => setQty(q => q + 1)}>+</button>
+                                <button
+                                    onClick={() => setQty(q => Math.min(maxQty, q + 1))}
+                                    disabled={qty >= maxQty}
+                                    style={qty >= maxQty ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                                >+</button>
                             </div>
                             <button
                                 className="btn btn-primary btn-lg"
@@ -168,6 +182,11 @@ const ProductDetailPage = () => {
                                 )}
                             </button>
                         </div>
+                        {inStock && (
+                            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px' }}>
+                                คงเหลือ <strong style={{ color: maxQty <= 5 ? '#f59e0b' : '#10b981' }}>{maxQty}</strong> {selectedVariant?.unit || 'ชิ้น'}
+                            </p>
+                        )}
 
                     </div>
                 </div>

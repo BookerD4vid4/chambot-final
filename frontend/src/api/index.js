@@ -57,6 +57,13 @@ export const createCategory = (data) => API.post('/categories', data);
 export const updateCategory = (id, data) => API.put(`/categories/${id}`, data);
 export const deleteCategory = (id) => API.delete(`/categories/${id}`);
 
+// ─── Cart ───────────────────────────────────────────────
+export const getMyCart = () => API.get('/cart');
+export const addCartItem = (data) => API.post('/cart/items', data);
+export const updateCartItem = (data) => API.patch('/cart/items', data);
+export const removeCartItem = (variantId) => API.delete(`/cart/items/${variantId}`);
+export const clearMyCart = () => API.delete('/cart');
+
 // ─── Orders (User) ──────────────────────────────────────
 export const getOrders = (params = {}) => API.get('/orders', { params });
 export const getOrderById = (id) => API.get(`/orders/${id}`);

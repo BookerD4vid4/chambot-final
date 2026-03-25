@@ -93,6 +93,8 @@ const ChatbotWidget = () => {
                     // addItem(product, variant, quantity, silent)
                     addItem(a.product, a.variant, a.quantity ?? 1, true);
                     toast.success(`เพิ่ม "${a.product.name}" ลงตะกร้าแล้ว! 🛒`);
+                } else if (a.type === 'refresh_cart_trigger') {
+                    window.dispatchEvent(new Event('refresh_cart_trigger'));
                 } else if (a.type === 'set_checkout_address') {
                     setCheckoutAddressId(a.address_id);
                 } else if (a.type === 'show_promptpay_qr' || (a.type === 'clear_cart' && checkoutAddressId)) {

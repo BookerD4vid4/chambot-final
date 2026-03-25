@@ -28,20 +28,20 @@ WHERE phone_number = '0855555555';
 -- 2. USER ADDRESSES
 -- ════════════════════════════════════════
 
-INSERT INTO public.user_addresses (user_id, recipient_name, address_line, province, postal_code, is_default)
-SELECT id, 'มานี มีเงิน',        '12 ม.3 ต.นาดี อ.เมือง',          'ขอนแก่น', '40000', true
+INSERT INTO public.user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
+SELECT id, 'มานี มีเงิน',        '12 ม.3 ต.นาดี', 'เมือง',          'ขอนแก่น', '40000', true
 FROM public.users WHERE phone_number = '0811111111';
 
-INSERT INTO public.user_addresses (user_id, recipient_name, address_line, province, postal_code, is_default)
-SELECT id, 'มานี มีเงิน (บ้านแม่)', '88 ม.7 ต.บ้านทุ่ม อ.เมือง',   'ขอนแก่น', '40000', false
+INSERT INTO public.user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
+SELECT id, 'มานี มีเงิน (บ้านแม่)', '88 ม.7 ต.บ้านทุ่ม', 'เมือง',   'ขอนแก่น', '40000', false
 FROM public.users WHERE phone_number = '0811111111';
 
-INSERT INTO public.user_addresses (user_id, recipient_name, address_line, province, postal_code, is_default)
-SELECT id, 'วิไล ซื้อบ่อย',      '45 ม.2 ต.หนองแวง อ.พล',          'ขอนแก่น', '40120', true
+INSERT INTO public.user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
+SELECT id, 'วิไล ซื้อบ่อย',      '45 ม.2 ต.หนองแวง', 'พล',          'ขอนแก่น', '40120', true
 FROM public.users WHERE phone_number = '0822222222';
 
-INSERT INTO public.user_addresses (user_id, recipient_name, address_line, province, postal_code, is_default)
-SELECT id, 'ประสิทธิ์ สั่งเยอะ', '3/1 ม.5 ต.ท่าขอนยาง อ.กันทรวิชัย','มหาสารคาม', '44150', true
+INSERT INTO public.user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
+SELECT id, 'ประสิทธิ์ สั่งเยอะ', '3/1 ม.5 ต.ท่าขอนยาง', 'กันทรวิชัย','มหาสารคาม', '44150', true
 FROM public.users WHERE phone_number = '0833333333';
 
 -- ════════════════════════════════════════
@@ -49,14 +49,14 @@ FROM public.users WHERE phone_number = '0833333333';
 -- ════════════════════════════════════════
 
 INSERT INTO public.categories (name) VALUES
-('ข้าวและแป้ง'),       -- 1
-('เครื่องปรุงรส'),     -- 2
-('น้ำมันและกะทิ'),     -- 3
-('บะหมี่และเส้น'),     -- 4
-('เครื่องดื่ม'),       -- 5
-('ขนมและของว่าง'),     -- 6
-('ของใช้ในครัวเรือน'), -- 7
-('ยาและสุขภาพ');       -- 8
+('เครื่องดื่ม'),                  -- category_id = 1
+('อาหารแห้งและเครื่องปรุง'),          -- category_id = 2
+('ขนมขบเคี้ยว'),                 -- category_id = 3
+('ของใช้ส่วนตัว'),                -- category_id = 4
+('ผลิตภัณฑ์ทำความสะอาด'),           -- category_id = 5
+('ยาสามัญประจำบ้าน'),              -- category_id = 6
+('สินค้าเบ็ดเตล็ด'),               -- category_id = 7
+('ของสดและอื่นๆ');                -- category_id = 8
 
 -- ════════════════════════════════════════
 -- 4. PRODUCTS (20 รายการ)
@@ -69,55 +69,55 @@ INSERT INTO public.products (name, description, slug, category_id, is_active) VA
 ('ข้าวสารหอมมะลิ',
  'ข้าวหอมมะลิอินทรีย์จากทุ่งทุเรียน 100% เมล็ดใส หุงขึ้นหม้อ หอมนุ่ม',
  'jasmine-rice',
- (SELECT category_id FROM public.categories WHERE name = 'ข้าวและแป้ง'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 ('แป้งสาลีอเนกประสงค์',
  'แป้งสาลีเนื้อละเอียด เหมาะสำหรับทำขนม ทอด และชุบ',
  'all-purpose-flour',
- (SELECT category_id FROM public.categories WHERE name = 'ข้าวและแป้ง'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 -- ── เครื่องปรุงรส ─────────────────────────────────────────────────────────────
 ('น้ำปลาตราปลาหมึก',
  'น้ำปลาแท้จากปลาทะเล หมักนาน 18 เดือน รสชาติกลมกล่อม',
  'fish-sauce-squid',
- (SELECT category_id FROM public.categories WHERE name = 'เครื่องปรุงรส'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 ('ซีอิ๊วขาวเข้มข้น',
  'ซีอิ๊วขาวสูตรเข้มข้น เหมาะผัด นึ่ง และจิ้ม',
  'light-soy-sauce',
- (SELECT category_id FROM public.categories WHERE name = 'เครื่องปรุงรส'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 ('น้ำตาลทรายขาว',
  'น้ำตาลทรายขาวบริสุทธิ์ เนื้อละเอียด ละลายง่าย',
  'white-sugar',
- (SELECT category_id FROM public.categories WHERE name = 'เครื่องปรุงรส'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 ('เกลือทะเลเม็ดละเอียด',
  'เกลือทะเลธรรมชาติ ไม่ฟอกขาว เสริมไอโอดีน',
  'sea-salt',
- (SELECT category_id FROM public.categories WHERE name = 'เครื่องปรุงรส'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 -- ── น้ำมันและกะทิ ────────────────────────────────────────────────────────────
 ('น้ำมันพืชตราจิงจอก',
  'น้ำมันพืชสกัดจากถั่วเหลือง ไม่มีคอเลสเตอรอล เหมาะสำหรับทอดและผัด',
  'vegetable-oil-jingog',
- (SELECT category_id FROM public.categories WHERE name = 'น้ำมันและกะทิ'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 ('กะทิกล่องพร้อมปรุง',
  'กะทิสดคั้นจากมะพร้าวแก่ เนื้อกะทิข้น หอม ไม่มีสารกันบูด',
  'coconut-milk-box',
- (SELECT category_id FROM public.categories WHERE name = 'น้ำมันและกะทิ'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 -- ── บะหมี่และเส้น ────────────────────────────────────────────────────────────
 ('มาม่าต้มยำกุ้ง',
  'บะหมี่กึ่งสำเร็จรูปรสต้มยำกุ้ง สูตรต้นตำรับ เผ็ดกลมกล่อม',
  'mama-tomyum',
- (SELECT category_id FROM public.categories WHERE name = 'บะหมี่และเส้น'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 ('เส้นหมี่ข้าวอบแห้ง',
  'เส้นหมี่ทำจากข้าวเจ้า 100% ไม่มีแป้งสาลี เหมาะสำหรับผัดและแกง',
  'rice-vermicelli',
- (SELECT category_id FROM public.categories WHERE name = 'บะหมี่และเส้น'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), true),
 
 -- ── เครื่องดื่ม ───────────────────────────────────────────────────────────────
 ('น้ำดื่มบรรจุขวด',
@@ -139,40 +139,40 @@ INSERT INTO public.products (name, description, slug, category_id, is_active) VA
 ('ขนมปังแผ่นธัญพืช',
  'ขนมปังธัญพืชรวม 7 ชนิด ไม่ใส่สีและกลิ่นสังเคราะห์ เหมาะเป็นอาหารเช้า',
  'multigrain-bread',
- (SELECT category_id FROM public.categories WHERE name = 'ขนมและของว่าง'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'ขนมขบเคี้ยว'), true),
 
 ('มันฝรั่งอบกรอบ',
  'มันฝรั่งแท้ 100% อบไม่ทอด ลดไขมัน มีให้เลือกหลายรสชาติ',
  'baked-potato-chips',
- (SELECT category_id FROM public.categories WHERE name = 'ขนมและของว่าง'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'ขนมขบเคี้ยว'), true),
 
 -- ── ของใช้ในครัวเรือน ────────────────────────────────────────────────────────
 ('น้ำยาล้างจาน',
  'น้ำยาล้างจานสูตรมะนาว ขจัดคราบมัน ไม่ทำลายมือ ฟองเยอะ',
  'dishwashing-liquid',
- (SELECT category_id FROM public.categories WHERE name = 'ของใช้ในครัวเรือน'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'ผลิตภัณฑ์ทำความสะอาด'), true),
 
 ('ถุงดำใส่ขยะ',
  'ถุงพลาสติกสีดำ ทนทาน ไม่ขาดง่าย บรรจุ 30 ใบต่อแพ็ก ขนาด 24x28 นิ้ว',
  'garbage-bag-black',
- (SELECT category_id FROM public.categories WHERE name = 'ของใช้ในครัวเรือน'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'สินค้าเบ็ดเตล็ด'), true),
 
 -- ── ยาและสุขภาพ ──────────────────────────────────────────────────────────────
 ('ยาดมตราอินทนิล',
  'ยาดมสมุนไพร เมนทอล การบูร พิมเสน บรรเทาอาการวิงเวียน คัดจมูก',
  'smelling-salts-inthanin',
- (SELECT category_id FROM public.categories WHERE name = 'ยาและสุขภาพ'), true),
+ (SELECT category_id FROM public.categories WHERE name = 'ยาสามัญประจำบ้าน'), true),
 
 -- ── Inactive products (soft delete) — test case ───────────────────────────────
 ('น้ำส้มสายชูกลั่น (ยกเลิก)',
  'สินค้าหยุดจำหน่ายแล้ว',
  'vinegar-discontinued',
- (SELECT category_id FROM public.categories WHERE name = 'เครื่องปรุงรส'), false),
+ (SELECT category_id FROM public.categories WHERE name = 'อาหารแห้งและเครื่องปรุง'), false),
 
 ('ขนมเวเฟอร์ (ยกเลิก)',
  'สินค้าหยุดจำหน่ายแล้ว',
  'wafer-discontinued',
- (SELECT category_id FROM public.categories WHERE name = 'ขนมและของว่าง'), false);
+ (SELECT category_id FROM public.categories WHERE name = 'ขนมขบเคี้ยว'), false);
 
 -- ════════════════════════════════════════
 -- 5. PRODUCT VARIANTS
@@ -376,7 +376,7 @@ VALUES ((SELECT MAX(order_id) FROM public.orders), 'qr', 'TXN-QR-00001', now() -
 INSERT INTO public.shipments (order_id, address_snapshot, status, shipped_at)
 VALUES (
     (SELECT MAX(order_id) FROM public.orders),
-    '{"recipient_name":"วิไล ซื้อบ่อย","address_line":"45 ม.2 ต.หนองแวง อ.พล","province":"ขอนแก่น","postal_code":"40120"}',
+    '{"recipient_name":"วิไล ซื้อบ่อย","address_line":"45 ม.2 ต.หนองแวง","district":"พล","province":"ขอนแก่น","postal_code":"40120"}',
     'delivered',
     now() - INTERVAL '4 days'
 );
@@ -401,7 +401,7 @@ VALUES ((SELECT MAX(order_id) FROM public.orders), 'transfer', 'TXN-TR-00002', n
 INSERT INTO public.shipments (order_id, address_snapshot, status, shipped_at)
 VALUES (
     (SELECT MAX(order_id) FROM public.orders),
-    '{"recipient_name":"ประสิทธิ์ สั่งเยอะ","address_line":"3/1 ม.5 ต.ท่าขอนยาง","province":"มหาสารคาม","postal_code":"44150"}',
+    '{"recipient_name":"ประสิทธิ์ สั่งเยอะ","address_line":"3/1 ม.5 ต.ท่าขอนยาง","district":"กันทรวิชัย","province":"มหาสารคาม","postal_code":"44150"}',
     'shipped',
     now() - INTERVAL '12 hours'
 );
@@ -462,7 +462,7 @@ VALUES ((SELECT MAX(order_id) FROM public.orders), 'cod', 'COD-00005', now() - I
 INSERT INTO public.shipments (order_id, address_snapshot, status, shipped_at)
 VALUES (
     (SELECT MAX(order_id) FROM public.orders),
-    '{"recipient_name":"นงลักษณ์ ใหม่มา","address_line":"99 ม.1 ต.โคกสูง","province":"อุดรธานี","postal_code":"41330"}',
+    '{"recipient_name":"นงลักษณ์ ใหม่มา","address_line":"99 ม.1 ต.โคกสูง","district":"เมือง","province":"อุดรธานี","postal_code":"41330"}',
     'returned',
     now() - INTERVAL '3 days'
 );

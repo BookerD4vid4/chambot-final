@@ -58,7 +58,13 @@ const CartDrawer = () => {
                                     <div className="qty-control">
                                         <button onClick={() => updateQty(item.key, item.quantity - 1)}><Minus size={12} /></button>
                                         <span>{item.quantity}</span>
-                                        <button onClick={() => updateQty(item.key, item.quantity + 1)}><Plus size={12} /></button>
+                                        <button
+                                            onClick={() => updateQty(item.key, item.quantity + 1)}
+                                            disabled={item.stock_quantity !== undefined && item.quantity >= item.stock_quantity}
+                                            style={item.stock_quantity !== undefined && item.quantity >= item.stock_quantity ? { opacity: 0.3, cursor: 'not-allowed' } : {}}
+                                        >
+                                            <Plus size={12} />
+                                        </button>
                                     </div>
                                     <button className="remove-btn" onClick={() => removeItem(item.key)}>
                                         <Trash2 size={14} />

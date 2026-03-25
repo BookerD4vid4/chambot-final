@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS public.user_addresses (
     recipient_name  VARCHAR(255) NOT NULL,
     address_line    TEXT NOT NULL,     -- customer กรอกเสมอ (บ้านเลขที่)
     province        VARCHAR(150),      -- กรอกเองได้ถ้า admin ไม่ lock
-    amphoe          VARCHAR(150),      -- กรอกเองได้ถ้า admin ไม่ lock
+    district        VARCHAR(150),      -- กรอกเองได้ถ้า admin ไม่ lock
     tambon          VARCHAR(150),      -- กรอกเองได้ถ้า admin ไม่ lock
     postal_code     VARCHAR(20),       -- กรอกเองได้ถ้า admin ไม่ lock
     is_default      BOOLEAN DEFAULT false,
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS public.user_addresses (
 CREATE TABLE IF NOT EXISTS public.delivery_settings (
     id          INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     province    VARCHAR(150),   -- NULL = ไม่ lock ให้ customer กรอกเอง
-    amphoe      VARCHAR(150),   -- NULL = ไม่ lock
+    district      VARCHAR(150),   -- NULL = ไม่ lock
     tambon      VARCHAR(150),   -- NULL = ไม่ lock
     postal_code VARCHAR(20),    -- NULL = ไม่ lock
     is_locked   BOOLEAN DEFAULT false, -- เพิ่ม column นี้
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS public.delivery_settings (
 );
 
 -- seed ค่าเริ่มต้น (ทุก field = NULL = ยังไม่ lock อะไร)
-INSERT INTO public.delivery_settings (province, amphoe, tambon, postal_code, is_locked)
+INSERT INTO public.delivery_settings (province, district, tambon, postal_code, is_locked)
 VALUES (NULL, NULL, NULL, NULL, false);
 -- 3.3 CATEGORIES
 CREATE TABLE IF NOT EXISTS public.categories (

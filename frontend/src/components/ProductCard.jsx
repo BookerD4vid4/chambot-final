@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
-import { useCart } from '../context/CartContext';
 import { getImageUrl } from '../api';
 import './ProductCard.css';
 
@@ -9,7 +8,6 @@ const formatPrice = (price) =>
     new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(price);
 
 const ProductCard = ({ product }) => {
-    const { addItem } = useCart();
     const {
         product_id,
         product_name,
@@ -18,19 +16,15 @@ const ProductCard = ({ product }) => {
         image_url,
         min_price,
         max_price,
-        total_stock,
+        available_stock,
     } = product;
 
     const priceText = min_price === max_price
         ? formatPrice(min_price)
         : `${formatPrice(min_price)} – ${formatPrice(max_price)}`;
 
-    const inStock = total_stock > 0;
+    const inStock = available_stock > 0;
 
-    const handleQuickAdd = (e) => {
-        e.preventDefault();
-        // Quick add uses the product data — full add happens on detail page
-    };
 
     return (
         <Link to={`/product/${product_id}`} className="product-card">
@@ -46,6 +40,9 @@ const ProductCard = ({ product }) => {
 
                 {category_name && (
                     <span className="product-card-category">{category_name}</span>
+                )}
+                {!inStock && (
+                    <span className="product-card-out-badge">สินค้าหมด</span>
                 )}
             </div>
 

@@ -181,13 +181,6 @@ const createOrder = async ({ user_id, items, total_amount, address_snapshot, add
                 [newOrder.order_id, item.variant_id, item.price, item.quantity]
             );
             
-            // Stock Reservation for 15 mins (schema default)
-            await db.query(`
-                INSERT INTO stock_reservations (order_id, variant_id, quantity) 
-                VALUES ($1, $2, $3)`,
-                [newOrder.order_id, item.variant_id, item.quantity]
-            );
-
             // Update reserved_quantity in product_variants
             await db.query(
                 "UPDATE product_variants SET reserved_quantity = reserved_quantity + $1 WHERE variant_id = $2",

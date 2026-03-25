@@ -57,7 +57,8 @@ const toolSearchProducts = async (query) => {
     const products = await Promise.all(
         mergedRows.map(async (prod) => {
             const { rows: variants } = await db.query(
-                `SELECT variant_id, sku, unit, price, stock_quantity
+                `SELECT variant_id, sku, unit, price,
+                        GREATEST(0, stock_quantity - reserved_quantity) AS stock_quantity
                  FROM product_variants
                  WHERE product_id = $1 AND is_active = true
                  ORDER BY is_main DESC NULLS LAST LIMIT 5`,
@@ -80,7 +81,8 @@ const toolGetProductDetails = async (productId) => {
     );
     if (!prodRows.length) return { found: false, message: "ไม่พบสินค้า" };
     const { rows: variants } = await db.query(
-        `SELECT variant_id, sku, unit, price, stock_quantity
+        `SELECT variant_id, sku, unit, price,
+                GREATEST(0, stock_quantity - reserved_quantity) AS stock_quantity
          FROM product_variants
          WHERE product_id = $1::int AND is_active = true
          ORDER BY is_main DESC NULLS LAST`,
@@ -131,7 +133,7 @@ const toolGetMyAddresses = async (userId) => {
     if (!userId) return { found: false, message: "กรุณาล็อกอินก่อนดูที่อยู่จัดส่ง" };
     try {
         const { rows } = await db.query(
-            "SELECT address_id, recipient_name, address_line, province, amphoe, tambon, postal_code FROM user_addresses WHERE user_id = $1 ORDER BY address_id DESC",
+            "SELECT address_id, recipient_name, address_line, district, province, postal_code FROM user_addresses WHERE user_id = $1 ORDER BY address_id DESC",
             [userId]
         );
         if (!rows.length) return { found: false, message: "ยังไม่มีที่อยู่จัดส่ง กรุณาเพิ่มที่อยู่ในหน้าชำระเงิน" };
@@ -143,14 +145,14 @@ const toolGetMyAddresses = async (userId) => {
 
 // ─── ดึงรายการหมวดหมู่ทั้งหมด ─────────────────────────────────────────────────
 const CATEGORY_ICONS = {
-    'ข้าวและแป้ง':              '🍚',
-    'เครื่องปรุงรส':            '🧂',
-    'น้ำมันและกะทิ':            '🥥',
-    'บะหมี่และเส้น':            '🍜',
     'เครื่องดื่ม':              '🥤',
-    'ขนมและของว่าง':            '🍿',
-    'ของใช้ในครัวเรือน':        '🧹',
-    'ยาและสุขภาพ':              '💊',
+    'อาหารแห้งและเครื่องปรุง':     '🍚',
+    'ขนมขบเคี้ยว':             '🍪',
+    'ของใช้ส่วนตัว':            '🧴',
+    'ผลิตภัณฑ์ทำความสะอาด':       '🧼',
+    'ยาสามัญประจำบ้าน':          '💊',
+    'สินค้าเบ็ดเตล็ด':           '📦',
+    'ของสดและอื่นๆ':            '🥦'
 };
 
 const toolGetCategories = async () => {
@@ -203,13 +205,19 @@ const toolGetProductsByCategory = async (categoryId, categoryName) => {
             [catId]
         );
 
-        if (!rows.length) return { found: false, message: "ไม่มีสินค้าในหมวดหมู่นี้" };
+        // ดึงชื่อหมวดหมู่เต็มๆ แม้จะไม่มีสินค้า
+        let fullCategoryName = categoryName;
+        const { rows: finalCat } = await db.query(`SELECT name FROM categories WHERE category_id = $1`, [catId]);
+        if (finalCat.length) fullCategoryName = finalCat[0].name;
+
+        if (!rows.length) return { found: false, message: `ไม่มีสินค้าในหมวดหมู่ "${fullCategoryName}"` };
 
         // ดึง variant (ราคา, สต็อก) ของแต่ละสินค้า
         const products = await Promise.all(
             rows.map(async (prod) => {
                 const { rows: variants } = await db.query(
-                    `SELECT variant_id, sku, unit, price, stock_quantity
+                    `SELECT variant_id, sku, unit, price,
+                            GREATEST(0, stock_quantity - reserved_quantity) AS stock_quantity
                      FROM product_variants
                      WHERE product_id = $1 AND is_active = true
                      ORDER BY is_main DESC NULLS LAST LIMIT 3`,
@@ -225,23 +233,55 @@ const toolGetProductsByCategory = async (categoryId, categoryName) => {
     }
 };
 
+const cartRepo = require("../repositories/cartRepository");
+
 /**
  * toolAddProductByName: ค้นหาสินค้าจากชื่อ → ดึง variant → คืน add_to_cart action
  * ไม่ต้องการ product_id / variant_id ป้องกัน model ใส่ id ผิด
  */
-const toolAddProductByName = async (productName, quantity = 1, variantSku = "") => {
+const toolAddProductByName = async (userId, productName, quantity = 1, variantSku = "") => {
     try {
+        if (!userId) return { success: false, message: "กรุณาล็อกอินก่อนซื้อสินค้า" };
         if (!productName) return { success: false, message: "กรุณาระบุชื่อสินค้า" };
         const qty = Math.max(1, parseInt(quantity) || 1);
 
-        // ค้นหาสินค้าจากชื่อ (fuzzy)
-        const { rows: prodRows } = await db.query(
+        // ค้นหาสินค้าจากชื่อ (fuzzy) — 3 ระดับ
+        // 1) ชื่อเต็ม LIKE (แบบเดิม)
+        let { rows: prodRows } = await db.query(
             `SELECT p.product_id, p.name
              FROM products p
              WHERE LOWER(p.name) LIKE LOWER($1) AND p.is_active = true
              ORDER BY LENGTH(p.name) ASC LIMIT 1`,
             [`%${productName}%`]
         );
+
+        // 2) ถ้าไม่เจอ: ลองเช็คว่า productName "มี" ชื่อสินค้าใน DB หรือเปล่า (กรณี AI ใส่ชื่อ variant พ่วงมาในก้อนเดียวกัน)
+        if (!prodRows.length) {
+            const { rows: allProds } = await db.query(
+                `SELECT product_id, name FROM products WHERE is_active = true`
+            );
+            // หาตัวที่ชื่อสินค้าอยู่ใน productName และยาวที่สุด (เพื่อความแม่นยำ)
+            const matches = allProds.filter(p => productName.toLowerCase().includes(p.name.toLowerCase()));
+            if (matches.length) {
+                const bestMatch = matches.sort((a, b) => b.name.length - a.name.length)[0];
+                prodRows = [bestMatch];
+            }
+        }
+
+        // 3) ถ้ายังไม่เจอ: ลองค้นทีละคำ (ตัด spacebar)
+        if (!prodRows.length) {
+            const words = productName.split(/\s+/).filter(w => w.length >= 2);
+            if (words.length > 1) {
+                const { rows: allProds } = await db.query(
+                    `SELECT product_id, name FROM products WHERE is_active = true`
+                );
+                const scored = allProds.map(p => ({
+                    ...p,
+                    score: words.filter(w => p.name.toLowerCase().includes(w.toLowerCase())).length
+                })).filter(p => p.score > 0).sort((a, b) => b.score - a.score || a.name.length - b.name.length);
+                if (scored.length) prodRows = [scored[0]];
+            }
+        }
         if (!prodRows.length) {
             return { success: false, message: `ไม่พบสินค้า "${productName}" ในระบบ` };
         }
@@ -249,7 +289,9 @@ const toolAddProductByName = async (productName, quantity = 1, variantSku = "") 
         const prod = prodRows[0];
         // ดึง All variant
         const { rows: varRows } = await db.query(
-            `SELECT variant_id, sku, price, unit, stock_quantity, image_url
+            `SELECT variant_id, sku, price, unit,
+                    GREATEST(0, stock_quantity - reserved_quantity) AS stock_quantity,
+                    image_url
              FROM product_variants
              WHERE product_id = $1 AND is_active = true
              ORDER BY is_main DESC NULLS LAST, variant_id ASC`,
@@ -263,14 +305,23 @@ const toolAddProductByName = async (productName, quantity = 1, variantSku = "") 
         } else {
             // Multiple variants available
             if (!variantSku) {
-                const options = varRows.map(vr => `${vr.sku || 'ปกติ'} (${parseFloat(vr.price)}฿)`).join(", ");
-                return { success: false, message: `"${prod.name}" มีหลายรูปแบบ กรุณาให้ลูกค้าเลือกจากออปชันเหล่านี้: ${options}` };
-            }
-            // Try to match sku
-            v = varRows.find(vr => vr.sku && vr.sku.toLowerCase().includes(variantSku.toLowerCase()));
-            if (!v) {
-                const options = varRows.map(vr => `${vr.sku || 'ปกติ'} (${parseFloat(vr.price)}฿)`).join(", ");
-                return { success: false, message: `ไม่พบลักษณะ "${variantSku}" สำหรับ "${prod.name}" กรุณาให้ลูกค้าเลือกจากตัวเลือกเหล่านี้: ${options}` };
+                // ลองดูว่าใน productName มีคำที่ตรงกับ SKU/Unit ของ variant ไหม
+                v = varRows.find(vr => productName.toLowerCase().includes(vr.sku?.toLowerCase()) || productName.toLowerCase().includes(vr.unit?.toLowerCase()));
+                
+                if (!v) {
+                    const options = varRows.map(vr => `${vr.unit || vr.sku || 'ปกติ'} (${parseFloat(vr.price)}฿)`).join(", ");
+                    return { success: false, message: `"${prod.name}" มีหลายรูปแบบ กรุณาเลือก: ${options}` };
+                }
+            } else {
+                // Try to match sku
+                v = varRows.find(vr => 
+                    (vr.sku && vr.sku.toLowerCase().includes(variantSku.toLowerCase())) || 
+                    (vr.unit && vr.unit.toLowerCase().includes(variantSku.toLowerCase()))
+                );
+                if (!v) {
+                    const options = varRows.map(vr => `${vr.unit || vr.sku || 'ปกติ'} (${parseFloat(vr.price)}฿)`).join(", ");
+                    return { success: false, message: `ไม่พบลักษณะ "${variantSku}" สำหรับ "${prod.name}" กรุณาเลือก: ${options}` };
+                }
             }
         }
 
@@ -278,21 +329,16 @@ const toolAddProductByName = async (productName, quantity = 1, variantSku = "") 
             return { success: false, message: `"${prod.name}" มีสต็อกเพียง ${v.stock_quantity} ${v.unit || "ชิ้น"} ไม่เพียงพอ` };
         }
 
+        // Add to Database cart
+        await cartRepo.addItem(userId, v.variant_id, qty);
+
         const total = (parseFloat(v.price) * qty).toFixed(0);
         return {
             success: true,
-            message: `"${prod.name}" × ${qty} ${v.unit || "ชิ้น"} ราคา ฿${total} — (เพิ่มลงตะกร้าของลูกค้าเรียบร้อยแล้ว)`,
+            message: `"${prod.name}" × ${qty} ${v.unit || "ชิ้น"} ราคา ฿${total} — (เพิ่มลงตะกร้าของระบบเรียบร้อยแล้ว)`,
             __action: {
-                type: "add_to_cart",
-                product: { product_id: prod.product_id, name: prod.name },
-                variant: {
-                    variant_id: v.variant_id,
-                    sku: v.sku,
-                    price: v.price,
-                    unit: v.unit,
-                    image_url: v.image_url,
-                },
-                quantity: qty,
+                type: "refresh_cart_trigger", // trigger frontend to reload cart
+                product_name: prod.name
             },
         };
     } catch (err) {
@@ -302,12 +348,31 @@ const toolAddProductByName = async (productName, quantity = 1, variantSku = "") 
 };
 
 // ─── การสั่งซื้อในแชทบอท ───────────────────────────────────────────────────────
-const toolCheckoutOrderInChatbot = async (userId, cartItems, addressId, paymentMethod, actionsOut) => {
+const toolCheckoutOrderInChatbot = async (userId, addressId, paymentMethod, actionsOut) => {
     try {
         if (!userId) return { success: false, message: "กรุณาล็อกอินก่อนทำการสั่งซื้อ" };
-        if (!cartItems || cartItems.length === 0) return { success: false, message: "ตะกร้าสินค้าว่างเปล่า กรุณาเพิ่มสินค้าก่อน" };
+
+        const cart = await cartRepo.getCartByUserId(userId);
+        const cartItems = cart.items || [];
+
+        if (cartItems.length === 0) return { success: false, message: "ตะกร้าสินค้าว่างเปล่า กรุณาเพิ่มสินค้าก่อน" };
         if (!addressId) return { success: false, message: "กรุณาระบุที่อยู่จัดส่ง" };
         if (!paymentMethod || paymentMethod !== 'cod') return { success: false, message: "ทางร้านรองรับเฉพาะการเก็บเงินปลายทาง (COD) เท่านั้นค่ะ" };
+
+        // Fetch address details for snapshot
+        const { rows: addrRows } = await db.query(
+            "SELECT * FROM user_addresses WHERE address_id = $1 AND user_id = $2",
+            [addressId, userId]
+        );
+        if (!addrRows.length) return { success: false, message: "ไม่พบที่อยู่จัดส่งที่ระบุ" };
+        const addr = addrRows[0];
+        const address_snapshot = {
+            recipient_name: addr.recipient_name,
+            address_line: addr.address_line,
+            district: addr.district,
+            province: addr.province,
+            postal_code: addr.postal_code
+        };
 
         const items = cartItems.map(i => ({
             variant_id: i.variant_id,
@@ -321,6 +386,7 @@ const toolCheckoutOrderInChatbot = async (userId, cartItems, addressId, paymentM
         const payload = {
             user_id: userId,
             address_id: addressId,
+            address_snapshot, // Pass full object for snapshot
             payment_method: paymentMethod,
             total_amount,
             items
@@ -342,7 +408,11 @@ const toolCheckoutOrderInChatbot = async (userId, cartItems, addressId, paymentM
             [orderId]
         );
 
-        actionsOut.push({ type: 'clear_cart' });
+        // Clear Database Cart
+        await cartRepo.clearCart(userId);
+
+        actionsOut.push({ type: 'clear_cart' }); // Keep for frontend sync if needed
+        actionsOut.push({ type: 'refresh_cart_trigger' });
 
         const replyMessage = `📦 ได้รับออเดอร์แล้วค่ะ!\nคำสั่งซื้อรหัส #${orderId} ยอดรวม ${totalAmt} บาท อยู่ในสถานะ **รอยืนยัน**\nรอรับสินค้าที่บ้านและชำระเงินกับพนักงานส่งได้เลยนะคะ 🚚`;
 
@@ -404,6 +474,7 @@ const makeExecuteTool = (userId, actionsOut, cartItems, productsOut) => async (n
         case "add_to_cart":
         case "add_product_to_cart":
             result = await toolAddProductByName(
+                userId,
                 args.product_name || args.name || "",
                 args.quantity ?? 1,
                 args.variant_sku || ""
@@ -418,7 +489,7 @@ const makeExecuteTool = (userId, actionsOut, cartItems, productsOut) => async (n
             result = { success: true, message: `ทำการสั่งหน้าเว็บให้อัพเดทจำนวน ${args.product_name} เป็น ${args.quantity} ชิ้นแล้ว` };
             break;
         case "checkout_order_in_chatbot":
-            result = await toolCheckoutOrderInChatbot(userId, cartItems, args.address_id, args.payment_method, actionsOut);
+            result = await toolCheckoutOrderInChatbot(userId, args.address_id, args.payment_method, actionsOut);
             break;
         case "get_categories":
             result = await toolGetCategories();
@@ -471,13 +542,20 @@ const sendMessage = async (req, res) => {
         return res.status(200).json({ success: true, reply: "รับทราบค่ะ หากต้องการให้ช่วยเหลืออะไรเพิ่มเติม พิมพ์บอกได้ตลอดเลยนะคะ 🙇‍♀️", actions: [] });
     }
     if (/^(ตะกร้า|ตะกร้าสินค้า|ตะกร้าของฉัน|ดูตะกร้า|เช็คตะกร้า|รถเข็น)(ครับ|คับ|คัฟ|ค่ะ|คะ|จ้า|จ้ะ|ของฉัน)?$/i.test(cleanMsg)) {
-        if (cartItems.length === 0) {
+        if (!req.user) {
+            return res.status(200).json({ success: true, reply: "กรุณาล็อกอินก่อนดูตะกร้าสินค้านะคะ 😊", actions: [] });
+        }
+        
+        const cartDb = await cartRepo.getCartByUserId(req.user.id);
+        const myCartItems = cartDb.items || [];
+        
+        if (myCartItems.length === 0) {
             return res.status(200).json({ success: true, reply: "ตะกร้าสินค้าของคุณยังว่างเปล่าค่ะ สนใจดูสินค้าหมวดหมู่ไหนไหมคะ? 😊", actions: [] });
         }
-        const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const total = myCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         return res.status(200).json({ 
             success: true, 
-            reply: `ในตะกร้าของคุณมีสินค้า ${cartItems.length} รายการ ยอดรวม ${total} บาทค่ะ\nต้องการชำระเงินเลยไหมคะ?`, 
+            reply: `ในตะกร้าของคุณมีสินค้า ${myCartItems.length} รายการ ยอดรวม ${total} บาทค่ะ\nต้องการชำระเงินเลยไหมคะ?`, 
             actions: [{ type: 'show_inline_cart_checkout' }] 
         });
     }
@@ -555,7 +633,7 @@ const sendMessage = async (req, res) => {
         const actionsOut = [];
         
         // Execute checkout tool directly instead of going through LLM
-        const result = await toolCheckoutOrderInChatbot(req.user?.id, cartItems, checkoutAddressId, paymentMethod, actionsOut);
+        const result = await toolCheckoutOrderInChatbot(req.user?.id, checkoutAddressId, paymentMethod, actionsOut);
         
         if (!result.success) {
             return res.status(200).json({ success: true, reply: result.message, actions: actionsOut });

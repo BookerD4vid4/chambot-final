@@ -262,15 +262,6 @@ const deductStockOnShipped = async (orderId, externalClient = null) => {
             );
         }
 
-        // 4. Release stock reservations for this order
-        await client.query(
-            `UPDATE stock_reservations
-             SET released_at = NOW()
-             WHERE order_id = $1
-               AND released_at IS NULL`,
-            [orderId]
-        );
-
         if (ownTransaction) await client.query('COMMIT');
 
         console.log(`[stockService] ✅ deductStockOnShipped: order #${orderId} — ${results.length} variant(s) deducted`);

@@ -37,6 +37,12 @@ const ShopPage = () => {
         return () => clearTimeout(timer);
     }, [fetchProducts]);
 
+    // Auto-refresh every 30s so stock counts stay up-to-date
+    useEffect(() => {
+        const interval = setInterval(() => fetchProducts(), 30_000);
+        return () => clearInterval(interval);
+    }, [fetchProducts]);
+
     const handleCategory = (catId) => {
         const val = activeCategory === catId ? '' : catId;
         setActiveCategory(val);

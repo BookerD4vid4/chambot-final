@@ -16,8 +16,6 @@ import './DeliverySettingsPage.css';
 const DeliverySettingsPage = () => {
   const [settings, setSettings] = useState({
     province: '',
-    amphoe: '',
-    tambon: '',
     postal_code: '',
     is_locked: false,
   });
@@ -34,8 +32,6 @@ const DeliverySettingsPage = () => {
       if (res.data.success) {
         setSettings(res.data.data || {
           province: '',
-          amphoe: '',
-          tambon: '',
           postal_code: '',
           is_locked: false,
         });
@@ -120,34 +116,6 @@ const DeliverySettingsPage = () => {
                         value={settings.province || ''}
                         onChange={handleChange}
                         placeholder="เช่น กรุงเทพมหานคร"
-                      />
-                      <ChevronRight size={14} className="input-icon" />
-                    </div>
-                  </div>
-
-                  <div className="input-field">
-                    <label>อำเภอ / เขต</label>
-                    <div className="input-wrapper">
-                      <input
-                        type="text"
-                        name="amphoe"
-                        value={settings.amphoe || ''}
-                        onChange={handleChange}
-                        placeholder="เช่น เขตปทุมวัน"
-                      />
-                      <ChevronRight size={14} className="input-icon" />
-                    </div>
-                  </div>
-
-                  <div className="input-field">
-                    <label>ตำบล / แขวง</label>
-                    <div className="input-wrapper">
-                      <input
-                        type="text"
-                        name="tambon"
-                        value={settings.tambon || ''}
-                        onChange={handleChange}
-                        placeholder="เช่น แขวงรองเมือง"
                       />
                       <ChevronRight size={14} className="input-icon" />
                     </div>

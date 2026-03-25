@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Pencil, Trash2, Search, X, Upload, RotateCcw, Star, LayoutGrid, Table, Filter, ScanLine, CheckCircle, XCircle, Save, Edit3, AlertTriangle, ChevronRight, Cpu } from 'lucide-react';
-import { getProducts, getCategories, createProduct, updateProduct, deleteProduct, uploadImage, getImageUrl, getProductById, setMainVariant, updateVariantThreshold, ocrScan, checkProductEmbedding, embedSingleProduct, adjustStock } from '../../api';
+import { getProducts, getCategories, createProduct, updateProduct, deleteProduct, uploadImage, getImageUrl, getProductById, setMainVariant, updateVariantThreshold, ocrScan, checkProductEmbedding, embedSingleProduct, reindexEmbeddings, getEmbeddingStatus, adjustStock } from '../../api';
 import API from '../../api';
 import ProductImage from '../../components/ProductImage';
 import toast from 'react-hot-toast';
@@ -61,6 +61,8 @@ const ProductsPage = () => {
     const [detailLoading, setDetailLoading] = useState(false);
     const [embeddingInfo, setEmbeddingInfo] = useState(null);   // null | { has_embedding, updated_at, text_used }
     const [embeddingLoading, setEmbeddingLoading] = useState(false);
+    const [batchEmbedStatus, setBatchEmbedStatus] = useState(null); // { total_products, embedded_products }
+    const [batchEmbedRunning, setBatchEmbedRunning] = useState(false);
 
     // ── OCR State ──────────────────────────────────────────────────────────────
     const [ocrOpen, setOcrOpen] = useState(false);
@@ -87,6 +89,34 @@ const ProductsPage = () => {
     };
 
     useEffect(() => { fetchAll(); }, []);
+
+    // Fetch embedding coverage on mount
+    useEffect(() => {
+        getEmbeddingStatus().then(r => setBatchEmbedStatus(r.data.data)).catch(() => {});
+    }, []);
+
+    const handleBatchEmbed = async () => {
+        setBatchEmbedRunning(true);
+        try {
+            await reindexEmbeddings();
+            toast.success('กำลังสร้าง embedding สินค้าทั้งหมด...');
+            // Poll until all done
+            const poll = setInterval(async () => {
+                try {
+                    const r = await getEmbeddingStatus();
+                    setBatchEmbedStatus(r.data.data);
+                    if (r.data.data.pending <= 0) {
+                        clearInterval(poll);
+                        setBatchEmbedRunning(false);
+                        toast.success('สร้าง embedding ครบทุกสินค้าแล้ว! 🤖');
+                    }
+                } catch { clearInterval(poll); setBatchEmbedRunning(false); }
+            }, 3000);
+        } catch {
+            toast.error('เกิดข้อผิดพลาด');
+            setBatchEmbedRunning(false);
+        }
+    };
 
     const handleSelectProduct = async (p) => {
         setDetailLoading(true);
@@ -351,6 +381,28 @@ const ProductsPage = () => {
                             onClick={() => setViewMode('table')} title="Table"><Table size={16} /></button>
                     </div>
                     <button className="btn btn-secondary btn-sm" onClick={fetchAll} title="รีเฟรช"><RotateCcw size={15} /></button>
+                    {/* Batch embed button */}
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleBatchEmbed}
+                        disabled={batchEmbedRunning}
+                        title="สร้าง AI Embedding สำหรับสินค้าทั้งหมด"
+                        style={{ gap: 6, position: 'relative' }}
+                    >
+                        {batchEmbedRunning
+                            ? <><div className="spinner" style={{ width: 14, height: 14 }} /> กำลังสร้าง...  </>
+                            : <><Cpu size={15} /> Embed ทั้งหมด   </>
+                        }
+                        {batchEmbedStatus && (
+                            <span style={{
+                                fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                                background: batchEmbedStatus.pending > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(52,211,153,0.15)',
+                                color: batchEmbedStatus.pending > 0 ? '#f87171' : '#34d399',
+                            }}>
+                                {batchEmbedStatus.embedded_products}/{batchEmbedStatus.total_products}
+                            </span>
+                        )}
+                    </button>
                     <button
                         className="btn btn-secondary"
                         onClick={() => { ocrReset(); setOcrOpen(true); }}
