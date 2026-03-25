@@ -4,10 +4,6 @@ require("dotenv").config();
 
 const path = require("path");
 
-const productRoutes = require("./routes/productRoutes");
-const categoryRoutes = require("./routes/categoryRoutes");
-const variantRoutes = require("./routes/variantRoutes");
-const orderRoutes = require("./routes/orderRoutes");
 const adminOrderRoutes = require("./routes/adminOrderRoutes");
 const adminUserRoutes = require("./routes/adminUserRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -25,7 +21,6 @@ app.use(express.urlencoded({ limit: '20mb', extended: true }));
 app.use(cors());
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-// Routes
 // Public Routes
 app.use("/api/products", require("./routes/productRoutes"));
 app.use("/api/categories", require("./routes/categoryRoutes"));
@@ -53,7 +48,6 @@ app.post(
     (req, res, next) => {
         ocrController.upload.single("image")(req, res, (err) => {
             if (err) {
-                // Multer file-size limit exceeded
                 if (err.code === "LIMIT_FILE_SIZE") {
                     return res.status(413).json({
                         success: false,
@@ -68,7 +62,7 @@ app.post(
     ocrController.scanImage
 );
 
-// Error Handling Middleware
+// Global Error Handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({
