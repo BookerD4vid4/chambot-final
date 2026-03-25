@@ -1,0 +1,115 @@
+.shop-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    flex-wrap: wrap;
+}
+
+.shop-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.shop-count {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.shop-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 300px;
+}
+
+.shop-search-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--text-muted);
+}
+
+.shop-search-input {
+    width: 100%;
+    padding: 10px 16px 10px 38px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.shop-search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.shop-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.shop-filters {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+    flex-wrap: wrap;
+    color: var(--text-muted);
+}
+
+.filter-pill {
+    padding: 7px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.filter-pill:hover {
+    border-color: var(--border-accent);
+    color: var(--text-primary);
+}
+
+.filter-pill.active {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: var(--border-accent);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.shop-empty {
+    text-align: center;
+    padding: var(--space-3xl);
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.shop-empty-icon {
+    font-size: 56px;
+}
+
+.shop-empty h3 {
+    font-size: 20px;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 600px) {
+    .shop-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .shop-search-wrap {
+        width: 100%;
+    }
+}

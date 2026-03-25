@@ -1,0 +1,129 @@
+/* DashboardPage.css — E-commerce dark theme */
+
+.dashboard-revenue-chart {
+    padding: 20px;
+}
+
+.chart-placeholder {
+    height: 180px;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.quick-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.quick-action-btn:hover {
+    background: var(--bg-surface);
+    border-color: var(--accent-light);
+    color: var(--accent-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Revenue highlight */
+.revenue-highlight {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--text-primary);
+    letter-spacing: -1.5px;
+    line-height: 1;
+    margin-top: 4px;
+}
+
+.revenue-period {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* Status pills in table */
+.order-status-row td:first-child {
+    font-family: 'Inter', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Empty state */
+.empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.empty-state svg {
+    opacity: 0.2;
+}
+
+/* Clickable Stats */
+.stat-card.clickable {
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    border: 1px solid var(--border);
+}
+
+.stat-card.clickable:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-light);
+    box-shadow: var(--shadow-lg);
+    background: var(--bg-surface);
+}
+
+.stat-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2px;
+}
+
+.stat-card-arrow {
+    color: var(--text-muted);
+    opacity: 0.3;
+    transition: all 0.2s;
+}
+
+.stat-card.clickable:hover .stat-card-arrow {
+    opacity: 1;
+    color: var(--accent);
+    transform: translateX(2px);
+}
+
+.dashboard-revenue-chart {
+    min-height: 300px;
+}

@@ -1,0 +1,554 @@
+/* ================================================================
+   ORDERS PAGE — Local Delivery Card Theme
+   ================================================================ */
+
+/* ── Status Badge ── */
+.ord-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+/* ── Toolbar ── */
+.ord-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ord-filter-active {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+/* ── Date bar (collapsible) ── */
+.ord-date-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.orders-date-input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 13px;
+    padding: 7px 12px;
+    min-height: 36px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    color-scheme: light;
+}
+
+.orders-date-input:focus {
+    border-color: rgba(170, 93, 198, 0.5);
+    outline: none;
+}
+
+/* ── Status Tabs ── */
+.ord-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 20px;
+    scrollbar-width: none;
+}
+
+.ord-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.ord-tab {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+}
+
+.ord-tab:hover {
+    color: var(--text-secondary);
+}
+
+.ord-tab-active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 700;
+}
+
+/* ── Cards Grid ── */
+.ord-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+/* ── Order Card ── */
+.ord-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+}
+
+.ord-card:hover {
+    border-color: var(--accent-light);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.ord-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ord-card-id {
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--text-primary);
+    flex-shrink: 0;
+}
+
+.ord-card-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.ord-card-customer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.ord-card-call {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    text-decoration: none;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.ord-card-call:hover {
+    background: rgba(16, 185, 129, 0.25);
+}
+
+.ord-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ord-card-amount {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--accent);
+}
+
+
+.ord-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--border-light);
+    padding-top: 10px;
+    margin-top: 2px;
+}
+
+.ord-quick-btn {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px !important;
+    padding: 7px 10px !important;
+}
+
+.ord-card-detail-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: right;
+    margin-top: -4px;
+}
+
+/* ── Empty state ── */
+.ord-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 0;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* ── Pagination ── */
+.ord-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0;
+}
+
+/* ── Drawer Overlay ── */
+.ord-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ord-drawer {
+    width: 100%;
+    max-width: 440px;
+    height: 100vh;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    animation: drawerIn 0.25s ease;
+    overflow: hidden;
+}
+
+@keyframes drawerIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0.5;
+    }
+
+    to {
+        transform: none;
+        opacity: 1;
+    }
+}
+
+.ord-drawer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid rgba(170, 93, 198, 0.12);
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.ord-drawer-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.ord-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ── Info rows ── */
+.ord-info-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ord-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ord-info-icon {
+    color: #AA5DC6;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.ord-info-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 2px;
+}
+
+.ord-info-val {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.ord-call-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.ord-call-btn:hover {
+    background: rgba(16, 185, 129, 0.25);
+}
+
+/* ── Sections ── */
+.ord-section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(170, 93, 198, 0.1);
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.ord-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ── Items list ── */
+.ord-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.ord-item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.ord-item-img {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid rgba(170, 93, 198, 0.15);
+}
+
+.ord-item-name {
+    flex: 1;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.ord-item-qty {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.ord-item-price {
+    color: #AA5DC6;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.ord-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border-light);
+    padding-top: 10px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.ord-total-val {
+    font-size: 20px;
+    color: var(--accent);
+}
+
+/* ── Timeline ── */
+.ord-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.ord-tl-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    position: relative;
+    padding-bottom: 14px;
+}
+
+.ord-tl-item:last-child {
+    padding-bottom: 0;
+}
+
+.ord-tl-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 18px;
+    width: 2px;
+    bottom: 0;
+    background: rgba(170, 93, 198, 0.12);
+}
+
+.ord-tl-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+    z-index: 1;
+}
+
+.ord-tl-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.ord-tl-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.ord-tl-time {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* ── Action section ── */
+.ord-actions-section {
+    background: rgba(170, 93, 198, 0.04);
+    border-color: rgba(170, 93, 198, 0.2) !important;
+}
+
+.ord-action-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ord-action-btn {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── Close button ── */
+.modal-close {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+    flex-shrink: 0;
+}
+
+.modal-close:hover {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── Badge extras (keep for compatibility) ── */
+.badge-indigo {
+    background: rgba(80, 77, 156, 0.18);
+    color: #a5b4fc;
+    border: 1px solid rgba(80, 77, 156, 0.3);
+}
+
+.badge-blue {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .ord-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ord-drawer {
+        max-width: 100%;
+    }
+}

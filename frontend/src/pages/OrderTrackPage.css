@@ -1,0 +1,390 @@
+.track-page {
+    min-height: 100vh;
+    background: #f5f6fa;
+    padding: 2rem 1rem 5rem;
+}
+
+.track-container {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+/* Header */
+.track-back-link {
+    display: inline-block;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    transition: color 0.2s;
+}
+
+.track-back-link:hover {
+    color: #7c3aed;
+}
+
+.track-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0;
+}
+
+.track-order-id {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+    margin-bottom: 2rem;
+}
+
+/* Status Hero */
+.status-hero {
+    text-align: center;
+    padding: 2rem;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.status-hero.cancelled {
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.03);
+}
+
+.status-hero-icon {
+    font-size: 3.5rem;
+}
+
+.status-hero-label {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-top: 0.5rem;
+}
+
+.cancelled-badge {
+    display: inline-block;
+    margin-top: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    padding: 0.3rem 1rem;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Progress Bar */
+.progress-bar-wrap {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    overflow-x: auto;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.step-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 70px;
+}
+
+.step-circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.04);
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: #6b7280;
+    transition: all 0.3s;
+    position: relative;
+    z-index: 1;
+}
+
+.step-node.done .step-circle {
+    background: rgba(124, 58, 237, 0.1);
+    border-color: #7c3aed;
+    color: #7c3aed;
+}
+
+.step-node.active .step-circle {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    border-color: #7c3aed;
+    color: white;
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.35);
+    transform: scale(1.15);
+    font-size: 1.2rem;
+}
+
+.step-num {
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.step-label {
+    font-size: 0.68rem;
+    color: #6b7280;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.step-node.done .step-label {
+    color: #7c3aed;
+}
+
+.step-node.active .step-label {
+    color: #111827;
+    font-weight: 700;
+}
+
+.step-line {
+    flex: 1;
+    height: 2px;
+    background: rgba(0, 0, 0, 0.08);
+    margin-top: 20px;
+    min-width: 20px;
+    transition: background 0.3s;
+}
+
+.step-line.done {
+    background: linear-gradient(90deg, #7c3aed, #a855f7);
+}
+
+/* Tracking Card */
+.tracking-card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tracking-card-title {
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.tracking-info-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.tracking-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ti-label {
+    font-size: 0.72rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ti-value {
+    font-size: 0.95rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+.tracking-num {
+    font-family: monospace;
+    background: rgba(124, 58, 237, 0.08);
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    color: #7c3aed;
+    letter-spacing: 0.5px;
+}
+
+/* Timeline */
+.timeline-section {
+    margin-bottom: 2rem;
+}
+
+.timeline-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 1.25rem;
+}
+
+.no-timeline {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.timeline {
+    position: relative;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 1rem;
+}
+
+.tl-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tl-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.tl-line {
+    width: 2px;
+    flex: 1;
+    min-height: 24px;
+    background: rgba(0, 0, 0, 0.08);
+    margin: 4px 0;
+}
+
+.tl-content {
+    padding-bottom: 1.25rem;
+    flex: 1;
+}
+
+.tl-status {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.2rem;
+}
+
+.tl-note {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 0.3rem;
+}
+
+.tl-meta {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.tl-by {
+    font-size: 0.75rem;
+    color: #6b7280;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+}
+
+.tl-time {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* Error */
+.track-error {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: #6b7280;
+}
+
+.error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.btn-back {
+    display: inline-block;
+    margin-top: 1.5rem;
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    color: #7c3aed;
+    padding: 0.6rem 1.4rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    background: rgba(124, 58, 237, 0.15);
+    color: #6d28d9;
+}
+
+/* Skeletons */
+.track-skeleton-title,
+.track-skeleton-bar,
+.track-skeleton-card {
+    border-radius: 16px;
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    margin-bottom: 1.5rem;
+}
+
+.track-skeleton-title {
+    height: 80px;
+}
+
+.track-skeleton-bar {
+    height: 130px;
+}
+
+.track-skeleton-card {
+    height: 200px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0
+    }
+
+    100% {
+        background-position: -200% 0
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    .progress-bar-wrap {
+        padding: 1rem 0.75rem;
+    }
+
+    .step-node {
+        min-width: 55px;
+    }
+
+    .step-label {
+        font-size: 0.6rem;
+    }
+
+    .step-circle {
+        width: 34px;
+        height: 34px;
+    }
+
+    .track-title {
+        font-size: 1.4rem;
+    }
+}

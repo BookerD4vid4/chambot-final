@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+# package-lock.json (Standard practice is to track this for consistent installs)
+
+
+# Backend Environment
+backend/.env
+backend/uploads/
+
+# Frontend Environment
+frontend/.env
+frontend/build/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/tmp/
