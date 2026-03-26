@@ -26,7 +26,7 @@ const CheckoutPage = () => {
     const [addresses, setAddresses] = useState([]);
     const [selectedAddressId, setSelectedAddressId] = useState(null);
     const [isAddingAddr, setIsAddingAddr] = useState(false);
-    const [newAddr, setNewAddr] = useState({ recipient_name: '', address_line: '', district: '', province: '', postal_code: '' });
+    const [newAddr, setNewAddr] = useState({ recipient_name: '', address_line: '', tambon: '', amphoe: '', province: '', postal_code: '' });
     const [loading, setLoading] = useState(false);
     const [deliverySettings, setDeliverySettings] = useState(null);
     const checkoutSuccessRef = useRef(false);
@@ -37,6 +37,8 @@ const CheckoutPage = () => {
     const isAddressAllowed = (addr, settings) => {
         if (!settings || !settings.is_locked) return true;
         if (settings.province && addr.province !== settings.province) return false;
+        if (settings.amphoe && addr.amphoe !== settings.amphoe) return false;
+        if (settings.tambon && addr.tambon !== settings.tambon) return false;
         if (settings.postal_code && addr.postal_code !== settings.postal_code) return false;
         return true;
     };
@@ -75,7 +77,7 @@ const CheckoutPage = () => {
             setAddresses(prev => [added, ...prev]);
             setSelectedAddressId(added.address_id);
             setIsAddingAddr(false);
-            setNewAddr({ recipient_name: '', address_line: '', district: '', province: '', postal_code: '' });
+            setNewAddr({ recipient_name: '', address_line: '', tambon: '', amphoe: '', province: '', postal_code: '' });
             toast.success('เพิ่มที่อยู่แล้ว');
         } catch {
             toast.error('ไม่สามารถเพิ่มที่อยู่ได้');
@@ -100,7 +102,7 @@ const CheckoutPage = () => {
                 return toast.error('ที่อยู่นี้อยู่นอกพื้นที่จัดส่ง กรุณาเลือกที่อยู่อื่น');
             }
 
-            addressString = `${selected.recipient_name} | ${form.phone} | ${selected.address_line} ${selected.district || ''} ${selected.province} ${selected.postal_code}`.trim();
+            addressString = `${selected.recipient_name} | ${form.phone} | ${selected.address_line} ${selected.tambon || ''} ${selected.amphoe || ''} ${selected.province} ${selected.postal_code}`.trim();
         } else {
             // New address validation
             if (!isAddressAllowed(newAddr, deliverySettings)) {
@@ -110,7 +112,7 @@ const CheckoutPage = () => {
                 if (isAddingAddr) return toast.error('กรุณาบันทึกที่อยู่จัดส่งใหม่ก่อน');
                 return toast.error('กรุณาเลือกหรือเพิ่มที่อยู่จัดส่ง');
             }
-            addressString = `${newAddr.recipient_name} | ${form.phone} | ${newAddr.address_line} ${newAddr.district} ${newAddr.province} ${newAddr.postal_code}`.trim();
+            addressString = `${newAddr.recipient_name} | ${form.phone} | ${newAddr.address_line} ${newAddr.tambon} ${newAddr.amphoe} ${newAddr.province} ${newAddr.postal_code}`.trim();
         }
 
         setLoading(true);
@@ -182,7 +184,8 @@ const CheckoutPage = () => {
                                             setNewAddr({
                                                 recipient_name: '',
                                                 address_line: '',
-                                                district: '',
+                                                tambon: '',
+                                                amphoe: '',
                                                 province: deliverySettings.province,
                                                 postal_code: deliverySettings.postal_code
                                             });
@@ -211,7 +214,7 @@ const CheckoutPage = () => {
                                                         {!allowed && <span className="addr-invalid-badge">นอกเขตจัดส่ง</span>}
                                                     </div>
                                                     <p>{addr.address_line}</p>
-                                                    <p>{[addr.district, addr.province, addr.postal_code].filter(Boolean).join(' ')}</p>
+                                                    <p>{[addr.tambon, addr.amphoe, addr.province, addr.postal_code].filter(Boolean).join(' ')}</p>
                                                     {!allowed && <p className="addr-invalid-text">ขออภัยค่ะ พื้นที่นี้ยังไม่เปิดให้บริการจัดส่งในขณะนี้</p>}
                                                 </div>
                                                 {selectedAddressId === addr.address_id && allowed && <CheckCircle size={18} className="payment-check" />}
@@ -232,9 +235,17 @@ const CheckoutPage = () => {
                                     <div className="form-grid" style={{ marginTop: 10 }}>
                                         <input 
                                             className="input-field" 
+                                            placeholder="ตำบล" 
+                                            value={newAddr.tambon} 
+                                            onChange={e => setNewAddr(p => ({ ...p, tambon: e.target.value }))} 
+                                            disabled={deliverySettings?.is_locked && !!deliverySettings.tambon}
+                                        />
+                                        <input 
+                                            className="input-field" 
                                             placeholder="อำเภอ" 
-                                            value={newAddr.district} 
-                                            onChange={e => setNewAddr(p => ({ ...p, district: e.target.value }))} 
+                                            value={newAddr.amphoe} 
+                                            onChange={e => setNewAddr(p => ({ ...p, amphoe: e.target.value }))} 
+                                            disabled={deliverySettings?.is_locked && !!deliverySettings.amphoe}
                                         />
                                         <input 
                                             className="input-field" 

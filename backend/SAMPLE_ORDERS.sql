@@ -16,7 +16,8 @@ INSERT INTO public.users (phone_number, full_name, role, is_active) VALUES
 ('0822222222', 'วิไล ซื้อบ่อย',     'customer', true),
 ('0833333333', 'ประสิทธิ์ สั่งเยอะ','customer', true),
 ('0844444444', 'นงลักษณ์ ใหม่มา',   'customer', true),
-('0855555555', 'แดง โดนระงับ',      'customer', false);
+('0855555555', 'แดง โดนระงับ',      'customer', false)
+ON CONFLICT (phone_number) DO NOTHING;
 
 -- ตั้ง suspended_by / suspended_at สำหรับ user ที่ถูกระงับ
 UPDATE public.users
@@ -28,20 +29,20 @@ WHERE phone_number = '0855555555';
 -- 2. USER ADDRESSES
 -- ════════════════════════════════════════
 
-INSERT INTO public.user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
-SELECT id, 'มานี มีเงิน',        '12 ม.3 ต.นาดี', 'เมือง',          'ขอนแก่น', '40000', true
+INSERT INTO public.user_addresses (user_id, recipient_name, address_line, tambon, amphoe, province, postal_code, is_default)
+SELECT id, 'มานี มีเงิน',        '12 ม.3', 'นาดี', 'เมือง',          'ขอนแก่น', '40000', true
 FROM public.users WHERE phone_number = '0811111111';
 
-INSERT INTO public.user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
-SELECT id, 'มานี มีเงิน (บ้านแม่)', '88 ม.7 ต.บ้านทุ่ม', 'เมือง',   'ขอนแก่น', '40000', false
+INSERT INTO public.user_addresses (user_id, recipient_name, address_line, tambon, amphoe, province, postal_code, is_default)
+SELECT id, 'มานี มีเงิน (บ้านแม่)', '88 ม.7', 'บ้านทุ่ม', 'เมือง',   'ขอนแก่น', '40000', false
 FROM public.users WHERE phone_number = '0811111111';
 
-INSERT INTO public.user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
-SELECT id, 'วิไล ซื้อบ่อย',      '45 ม.2 ต.หนองแวง', 'พล',          'ขอนแก่น', '40120', true
+INSERT INTO public.user_addresses (user_id, recipient_name, address_line, tambon, amphoe, province, postal_code, is_default)
+SELECT id, 'วิไล ซื้อบ่อย',      '45 ม.2', 'หนองแวง', 'พล',          'ขอนแก่น', '40120', true
 FROM public.users WHERE phone_number = '0822222222';
 
-INSERT INTO public.user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
-SELECT id, 'ประสิทธิ์ สั่งเยอะ', '3/1 ม.5 ต.ท่าขอนยาง', 'กันทรวิชัย','มหาสารคาม', '44150', true
+INSERT INTO public.user_addresses (user_id, recipient_name, address_line, tambon, amphoe, province, postal_code, is_default)
+SELECT id, 'ประสิทธิ์ สั่งเยอะ', '3/1 ม.5', 'ท่าขอนยาง', 'กันทรวิชัย','มหาสารคาม', '44150', true
 FROM public.users WHERE phone_number = '0833333333';
 
 -- ════════════════════════════════════════
@@ -56,7 +57,8 @@ INSERT INTO public.categories (name) VALUES
 ('ผลิตภัณฑ์ทำความสะอาด'),           -- category_id = 5
 ('ยาสามัญประจำบ้าน'),              -- category_id = 6
 ('สินค้าเบ็ดเตล็ด'),               -- category_id = 7
-('ของสดและอื่นๆ');                -- category_id = 8
+('ของสดและอื่นๆ')                 -- category_id = 8
+ON CONFLICT (name) DO NOTHING;
 
 -- ════════════════════════════════════════
 -- 4. PRODUCTS (20 รายการ)
@@ -172,7 +174,8 @@ INSERT INTO public.products (name, description, slug, category_id, is_active) VA
 ('ขนมเวเฟอร์ (ยกเลิก)',
  'สินค้าหยุดจำหน่ายแล้ว',
  'wafer-discontinued',
- (SELECT category_id FROM public.categories WHERE name = 'ขนมขบเคี้ยว'), false);
+ (SELECT category_id FROM public.categories WHERE name = 'ขนมขบเคี้ยว'), false)
+ON CONFLICT (slug) DO NOTHING;
 
 -- ════════════════════════════════════════
 -- 5. PRODUCT VARIANTS
@@ -307,7 +310,8 @@ VALUES
  'VINEGAR-OLD-1', 15.00, 0, 0, NULL, 'ขวด', 5, true, false),
 
 ((SELECT product_id FROM public.products WHERE slug='wafer-discontinued'),
- 'WAFER-OLD-1', 10.00, 0, 0, NULL, 'ห่อ', 10, true, false);
+ 'WAFER-OLD-1', 10.00, 0, 0, NULL, 'ห่อ', 10, true, false)
+ON CONFLICT (sku) DO NOTHING;
 
 -- ════════════════════════════════════════
 -- 6. INVENTORY TRANSACTIONS (initial stock-in)
@@ -355,9 +359,9 @@ VALUES
 --           payment: pending, paid, failed, refunded
 --           shipment: preparing, shipped, delivered, returned
 
--- ── Order 1: วิไล — delivered + paid ─────────────────────────────────────────
-INSERT INTO public.orders (user_id, total_amount, status, payment_status)
-SELECT id, 179.00, 'delivered', 'paid'
+-- ── Order 1: วิไล — delivered ─────────────────────────────────────────
+INSERT INTO public.orders (user_id, total_amount, status, address_snapshot)
+SELECT id, 179.00, 'delivered', '{"recipient_name":"วิไล ซื้อบ่อย","address_line":"45 ม.2","tambon":"หนองแวง","amphoe":"พล","province":"ขอนแก่น","postal_code":"40120"}'
 FROM public.users WHERE phone_number = '0822222222';
 
 INSERT INTO public.order_items (order_id, variant_id, price, quantity)
@@ -370,20 +374,11 @@ VALUES
  (SELECT variant_id FROM public.product_variants WHERE sku='SOY-W-300ML'),    28.00, 1) -- รวม 200 แต่ test ส่วนลด
 ;
 
-INSERT INTO public.payments (order_id, method, transaction_ref, paid_at, status)
-VALUES ((SELECT MAX(order_id) FROM public.orders), 'qr', 'TXN-QR-00001', now() - INTERVAL '5 days', 'paid');
+-- Order 1: No payments/shipments tables anymore. Status and history managed via orders and order_status_logs.
 
-INSERT INTO public.shipments (order_id, address_snapshot, status, shipped_at)
-VALUES (
-    (SELECT MAX(order_id) FROM public.orders),
-    '{"recipient_name":"วิไล ซื้อบ่อย","address_line":"45 ม.2 ต.หนองแวง","district":"พล","province":"ขอนแก่น","postal_code":"40120"}',
-    'delivered',
-    now() - INTERVAL '4 days'
-);
-
--- ── Order 2: ประสิทธิ์ — shipped + paid ──────────────────────────────────────
-INSERT INTO public.orders (user_id, total_amount, status, payment_status)
-SELECT id, 546.00, 'shipped', 'paid'
+-- ── Order 2: ประสิทธิ์ — shipped ──────────────────────────────────────
+INSERT INTO public.orders (user_id, total_amount, status, address_snapshot)
+SELECT id, 546.00, 'shipped', '{"recipient_name":"ประสิทธิ์ สั่งเยอะ","address_line":"3/1 ม.5","tambon":"ท่าขอนยาง","amphoe":"กันทรวิชัย","province":"มหาสารคาม","postal_code":"44150"}'
 FROM public.users WHERE phone_number = '0833333333';
 
 INSERT INTO public.order_items (order_id, variant_id, price, quantity)
@@ -395,20 +390,11 @@ VALUES
 ((SELECT MAX(order_id) FROM public.orders),
  (SELECT variant_id FROM public.product_variants WHERE sku='SUGAR-W-1KG'),   25.00, 2);
 
-INSERT INTO public.payments (order_id, method, transaction_ref, paid_at, status)
-VALUES ((SELECT MAX(order_id) FROM public.orders), 'transfer', 'TXN-TR-00002', now() - INTERVAL '1 day', 'paid');
+-- Order 2: No payments/shipments tables anymore.
 
-INSERT INTO public.shipments (order_id, address_snapshot, status, shipped_at)
-VALUES (
-    (SELECT MAX(order_id) FROM public.orders),
-    '{"recipient_name":"ประสิทธิ์ สั่งเยอะ","address_line":"3/1 ม.5 ต.ท่าขอนยาง","district":"กันทรวิชัย","province":"มหาสารคาม","postal_code":"44150"}',
-    'shipped',
-    now() - INTERVAL '12 hours'
-);
-
--- ── Order 3: มานี — pending + pending payment (รอจ่าย) ───────────────────────
-INSERT INTO public.orders (user_id, total_amount, status, payment_status)
-SELECT id, 153.00, 'pending', 'pending'
+-- ── Order 3: มานี — pending ───────────────────────────────────────
+INSERT INTO public.orders (user_id, total_amount, status, address_snapshot)
+SELECT id, 153.00, 'pending', '{"recipient_name":"มานี มีเงิน","address_line":"12 ม.3","tambon":"นาดี","amphoe":"เมือง","province":"ขอนแก่น","postal_code":"40000"}'
 FROM public.users WHERE phone_number = '0811111111';
 
 INSERT INTO public.order_items (order_id, variant_id, price, quantity)
@@ -420,8 +406,7 @@ VALUES
 ((SELECT MAX(order_id) FROM public.orders),
  (SELECT variant_id FROM public.product_variants WHERE sku='DISH-500ML'),  28.00, 1);
 
-INSERT INTO public.payments (order_id, method, status)
-VALUES ((SELECT MAX(order_id) FROM public.orders), 'qr', 'pending');
+-- Order 3: No payments table anymore.
 
 -- stock_reservation สำหรับ order pending
 INSERT INTO public.stock_reservations (order_id, variant_id, quantity, expires_at)
@@ -433,9 +418,9 @@ VALUES
 ((SELECT MAX(order_id) FROM public.orders),
  (SELECT variant_id FROM public.product_variants WHERE sku='DISH-500ML'),  1, now() + INTERVAL '10 minutes');
 
--- ── Order 4: มานี — cancelled + failed payment ────────────────────────────────
-INSERT INTO public.orders (user_id, total_amount, status, payment_status)
-SELECT id, 48.00, 'cancelled', 'failed'
+-- ── Order 4: มานี — cancelled ────────────────────────────────
+INSERT INTO public.orders (user_id, total_amount, status, address_snapshot)
+SELECT id, 48.00, 'cancelled', '{"recipient_name":"มานี มีเงิน","address_line":"12 ม.3","tambon":"นาดี","amphoe":"เมือง","province":"ขอนแก่น","postal_code":"40000"}'
 FROM public.users WHERE phone_number = '0811111111';
 
 INSERT INTO public.order_items (order_id, variant_id, price, quantity)
@@ -443,12 +428,11 @@ VALUES
 ((SELECT MAX(order_id) FROM public.orders),
  (SELECT variant_id FROM public.product_variants WHERE sku='OIL-VEG-1L'), 48.00, 1);
 
-INSERT INTO public.payments (order_id, method, transaction_ref, status)
-VALUES ((SELECT MAX(order_id) FROM public.orders), 'qr', 'TXN-QR-FAIL-003', 'failed');
+-- Order 4: No payments table anymore.
 
--- ── Order 5: นงลักษณ์ — delivered + refunded ─────────────────────────────────
-INSERT INTO public.orders (user_id, total_amount, status, payment_status)
-SELECT id, 160.00, 'delivered', 'refunded'
+-- ── Order 5: นงลักษณ์ — delivered ─────────────────────────────────
+INSERT INTO public.orders (user_id, total_amount, status, address_snapshot)
+SELECT id, 160.00, 'delivered', '{"recipient_name":"นงลักษณ์ ใหม่มา","address_line":"99 ม.1","tambon":"โคกสูง","amphoe":"เมือง","province":"อุดรธานี","postal_code":"41330"}'
 FROM public.users WHERE phone_number = '0844444444';
 
 INSERT INTO public.order_items (order_id, variant_id, price, quantity)
@@ -456,16 +440,7 @@ VALUES
 ((SELECT MAX(order_id) FROM public.orders),
  (SELECT variant_id FROM public.product_variants WHERE sku='RICE-HM-5KG'), 160.00, 1);
 
-INSERT INTO public.payments (order_id, method, transaction_ref, paid_at, status)
-VALUES ((SELECT MAX(order_id) FROM public.orders), 'cod', 'COD-00005', now() - INTERVAL '3 days', 'refunded');
-
-INSERT INTO public.shipments (order_id, address_snapshot, status, shipped_at)
-VALUES (
-    (SELECT MAX(order_id) FROM public.orders),
-    '{"recipient_name":"นงลักษณ์ ใหม่มา","address_line":"99 ม.1 ต.โคกสูง","district":"เมือง","province":"อุดรธานี","postal_code":"41330"}',
-    'returned',
-    now() - INTERVAL '3 days'
-);
+-- Order 5: No payments/shipments tables anymore.
 
 -- ════════════════════════════════════════
 -- 9. ORDER STATUS LOGS
@@ -484,26 +459,14 @@ VALUES
 -- Order 4 (cancelled)
 INSERT INTO public.order_status_logs (order_id, status, changed_by, note)
 SELECT order_id, 'pending',   'system',     'สร้าง order'
-FROM public.orders WHERE payment_status='failed' LIMIT 1;
+FROM public.orders WHERE status='cancelled' LIMIT 1;
 
 INSERT INTO public.order_status_logs (order_id, status, changed_by, note)
-SELECT order_id, 'cancelled', '0800000001', 'ลูกค้าชำระเงินไม่สำเร็จ ยกเลิกอัตโนมัติ'
-FROM public.orders WHERE payment_status='failed' LIMIT 1;
+SELECT order_id, 'cancelled', '0800000001', 'ลูกค้าชำระเงินไม่สำเร็จ (จำลอง)'
+FROM public.orders WHERE status='cancelled' LIMIT 1;
 
 -- ════════════════════════════════════════
--- 10. PAYMENT WEBHOOKS (ตัวอย่าง log)
--- ════════════════════════════════════════
-
-INSERT INTO public.payment_webhooks (event_type, payload, processed) VALUES
-('charge.complete',
- '{"id":"chrg_001","amount":17900,"currency":"thb","status":"successful","metadata":{"order_id":1}}',
- true),
-('charge.fail',
- '{"id":"chrg_003","amount":4800,"currency":"thb","status":"failed","failure_code":"insufficient_fund"}',
- true),
-('transfer.complete',
- '{"id":"trsf_001","amount":54600,"currency":"thb","status":"paid"}',
- false);
+-- 10. PAYMENT WEBHOOKS — Removed as table no longer exists in SETUP.sql
 
 -- ════════════════════════════════════════
 -- 11. PRODUCT EMBEDDINGS (placeholder vectors)
@@ -535,9 +498,6 @@ UNION ALL SELECT 'variants (out-stock)', COUNT(*) FROM public.product_variants W
 UNION ALL SELECT 'variants (low-stock)', COUNT(*) FROM public.product_variants WHERE stock_quantity>0 AND stock_quantity<=low_stock_threshold AND is_active=true
 UNION ALL SELECT 'orders',               COUNT(*) FROM public.orders
 UNION ALL SELECT 'order_items',          COUNT(*) FROM public.order_items
-UNION ALL SELECT 'payments',             COUNT(*) FROM public.payments
-UNION ALL SELECT 'shipments',            COUNT(*) FROM public.shipments
-UNION ALL SELECT 'reservations (active)',COUNT(*) FROM public.stock_reservations WHERE released_at IS NULL
 UNION ALL SELECT 'inventory_tx',         COUNT(*) FROM public.inventory_transactions
 UNION ALL SELECT 'embeddings',           COUNT(*) FROM public.product_embeddings
 ORDER BY tbl;

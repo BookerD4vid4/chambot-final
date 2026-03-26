@@ -43,7 +43,7 @@ const trackOrder = async (id) => {
 };
 
 // ─── Update Status (Admin) ────────────────────────────────────────────────────
-const updateStatus = async (id, { status, note, changed_by }) => {
+const updateStatus = async (id, { status, note, tracking_number, shipping_provider, changed_by }) => {
     // Validate transition
     const current = await repo.getStatus(id);
     if (!current) throw Object.assign(new Error("Order not found"), { statusCode: 404 });
@@ -52,8 +52,15 @@ const updateStatus = async (id, { status, note, changed_by }) => {
     // Update order status
     await repo.updateStatus(id, { status });
 
+    // Build log note: combine provided note with tracking info
+    let finalNote = note || "";
+    if (tracking_number || shipping_provider) {
+        const trackInfo = `[${shipping_provider || "N/A"}: ${tracking_number || "N/A"}]`;
+        finalNote = finalNote ? `${finalNote} ${trackInfo}` : trackInfo;
+    }
+
     // Log
-    await repo.addStatusLog(id, { status, changed_by: changed_by || "admin", note });
+    await repo.addStatusLog(id, { status, changed_by: changed_by || "admin", note: finalNote });
 
     // ── When shipping: deduct stock & release reservations ──────────────────
     if (status === "shipped") {

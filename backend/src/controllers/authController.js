@@ -126,7 +126,7 @@ const updateProfile = async (req, res) => {
 const getAddresses = async (req, res) => {
     try {
         const result = await db.query(
-            "SELECT address_id, recipient_name, address_line, district, province, postal_code, is_default FROM user_addresses WHERE user_id = $1 ORDER BY is_default DESC, created_at DESC",
+            "SELECT address_id, recipient_name, address_line, tambon, amphoe, province, postal_code, is_default FROM user_addresses WHERE user_id = $1 ORDER BY is_default DESC, created_at DESC",
             [req.user.id]
         );
         res.status(200).json({ success: true, data: result.rows });
@@ -137,15 +137,15 @@ const getAddresses = async (req, res) => {
 
 // ─── POST /api/auth/addresses ─────────────────────────────────────────────────
 const addAddress = async (req, res) => {
-    const { recipient_name, address_line, district, province, postal_code, is_default } = req.body;
+    const { recipient_name, address_line, tambon, amphoe, province, postal_code, is_default } = req.body;
     try {
         if (is_default) {
             await db.query("UPDATE user_addresses SET is_default = false WHERE user_id = $1", [req.user.id]);
         }
         const result = await db.query(
-            `INSERT INTO user_addresses (user_id, recipient_name, address_line, district, province, postal_code, is_default)
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [req.user.id, recipient_name, address_line, district, province, postal_code, is_default || false]
+            `INSERT INTO user_addresses (user_id, recipient_name, address_line, tambon, amphoe, province, postal_code, is_default)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [req.user.id, recipient_name, address_line, tambon, amphoe, province, postal_code, is_default || false]
         );
         res.status(201).json({ success: true, data: result.rows[0] });
     } catch (err) {
@@ -156,16 +156,16 @@ const addAddress = async (req, res) => {
 // ─── PATCH /api/auth/addresses/:id ───────────────────────────────────────────
 const updateAddress = async (req, res) => {
     const { id } = req.params;
-    const { recipient_name, address_line, district, province, postal_code, is_default } = req.body;
+    const { recipient_name, address_line, tambon, amphoe, province, postal_code, is_default } = req.body;
     try {
         if (is_default) {
             await db.query("UPDATE user_addresses SET is_default = false WHERE user_id = $1", [req.user.id]);
         }
         const result = await db.query(
             `UPDATE user_addresses 
-             SET recipient_name = $1, address_line = $2, district = $3, province = $4, postal_code = $5, is_default = $6, created_at = created_at
-             WHERE address_id = $7 AND user_id = $8 RETURNING *`,
-            [recipient_name, address_line, district, province, postal_code, is_default || false, id, req.user.id]
+             SET recipient_name = $1, address_line = $2, tambon = $3, amphoe = $4, province = $5, postal_code = $6, is_default = $7, created_at = created_at
+             WHERE address_id = $8 AND user_id = $9 RETURNING *`,
+            [recipient_name, address_line, tambon, amphoe, province, postal_code, is_default || false, id, req.user.id]
         );
         res.status(200).json({ success: true, data: result.rows[0] });
     } catch (err) {
