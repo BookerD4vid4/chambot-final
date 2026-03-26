@@ -14,6 +14,7 @@ const {
   TOOLS,
 } = require("../services/typhoonService");
 const orderService = require("../services/orderService");
+const cartRepo = require("../repositories/cartRepository");
 
 // ─── Utility: Fuzzy Match / Similarity ───────────────────────────────────────
 const getSimilarity = (s1, s2) => {
@@ -279,7 +280,7 @@ const toolGetProductsByCategory = async (categoryId, categoryName) => {
   }
 };
 
-const cartRepo = require("../repositories/cartRepository");
+
 
 /**
  * toolAddProductByName: ค้นหาสินค้าจากชื่อ → ดึง variant → คืน add_to_cart action
@@ -292,146 +293,159 @@ const toolAddProductByName = async (
   variantSku = "",
 ) => {
   try {
-    if (!userId)
-      return { success: false, message: "กรุณาล็อกอินก่อนซื้อสินค้า" };
+    if (!userId) return { success: false, message: "กรุณาล็อกอินก่อนซื้อสินค้า" };
     if (!productName) return { success: false, message: "กรุณาระบุชื่อสินค้า" };
     const qty = Math.max(1, parseInt(quantity) || 1);
 
-    // ค้นหาสินค้าจากชื่อ (fuzzy) — 3 ระดับ
-    // 1) ชื่อเต็ม LIKE (แบบเดิม)
+    // 1. ค้นหาสินค้าจากชื่อ (3 ระดับ)
     let { rows: prodRows } = await db.query(
-      `SELECT p.product_id, p.name
-             FROM products p
-             WHERE LOWER(p.name) LIKE LOWER($1) AND p.is_active = true
-             ORDER BY LENGTH(p.name) ASC LIMIT 1`,
+      `SELECT p.product_id, p.name FROM products p WHERE LOWER(p.name) LIKE LOWER($1) AND p.is_active = true ORDER BY LENGTH(p.name) ASC LIMIT 1`,
       [`%${productName}%`],
     );
 
-    // 2) ถ้าไม่เจอ: ลองเช็คว่า productName "มี" ชื่อสินค้าใน DB หรือเปล่า (กรณี AI ใส่ชื่อ variant พ่วงมาในก้อนเดียวกัน)
     if (!prodRows.length) {
-      const { rows: allProds } = await db.query(
-        `SELECT product_id, name FROM products WHERE is_active = true`,
-      );
-      // หาตัวที่ชื่อสินค้าอยู่ใน productName และยาวที่สุด (เพื่อความแม่นยำ)
-      const matches = allProds.filter((p) =>
-        productName.toLowerCase().includes(p.name.toLowerCase()),
-      );
+      const { rows: allProds } = await db.query(`SELECT product_id, name FROM products WHERE is_active = true`);
+      const matches = allProds.filter((p) => productName.toLowerCase().includes(p.name.toLowerCase()));
       if (matches.length) {
-        const bestMatch = matches.sort(
-          (a, b) => b.name.length - a.name.length,
-        )[0];
-        prodRows = [bestMatch];
+        prodRows = [matches.sort((a, b) => b.name.length - a.name.length)[0]];
       }
     }
 
-    // 3) ถ้ายังไม่เจอ: ลองค้นทีละคำ (ตัด spacebar)
     if (!prodRows.length) {
       const words = productName.split(/\s+/).filter((w) => w.length >= 2);
       if (words.length > 1) {
-        const { rows: allProds } = await db.query(
-          `SELECT product_id, name FROM products WHERE is_active = true`,
-        );
+        const { rows: allProds } = await db.query(`SELECT product_id, name FROM products WHERE is_active = true`);
         const scored = allProds
-          .map((p) => ({
-            ...p,
-            score: words.filter((w) =>
-              p.name.toLowerCase().includes(w.toLowerCase()),
-            ).length,
-          }))
+          .map((p) => ({ ...p, score: words.filter((w) => p.name.toLowerCase().includes(w.toLowerCase())).length }))
           .filter((p) => p.score > 0)
           .sort((a, b) => b.score - a.score || a.name.length - b.name.length);
         if (scored.length) prodRows = [scored[0]];
       }
     }
-    if (!prodRows.length) {
-      return { success: false, message: `ไม่พบสินค้า "${productName}" ในระบบ` };
-    }
+    if (!prodRows.length) return { success: false, message: `ไม่พบสินค้า "${productName}" ในระบบ` };
 
     const prod = prodRows[0];
-    // ดึง All variant
     const { rows: varRows } = await db.query(
-      `SELECT variant_id, sku, price, unit,
-                    GREATEST(0, stock_quantity - reserved_quantity) AS stock_quantity,
-                    image_url
-             FROM product_variants
-             WHERE product_id = $1 AND is_active = true
-             ORDER BY is_main DESC NULLS LAST, variant_id ASC`,
+      `SELECT variant_id, sku, price, unit, GREATEST(0, stock_quantity - reserved_quantity) AS stock_quantity, image_url
+       FROM product_variants WHERE product_id = $1 AND is_active = true
+       ORDER BY is_main DESC NULLS LAST, variant_id ASC`,
       [prod.product_id],
     );
-    if (!varRows.length)
-      return { success: false, message: `"${prod.name}" ไม่มีตัวเลือกสินค้า` };
+    if (!varRows.length) return { success: false, message: `"${prod.name}" ไม่มีตัวเลือกสินค้า` };
 
-    let v = null;
+    // 2. ค้นหา Variant ที่เหมาะสมที่สุด (Smarter Matching)
+    let bestVariant = null;
+
     if (varRows.length === 1) {
-      v = varRows[0];
+      bestVariant = varRows[0];
     } else {
-      // Multiple variants available
-      if (!variantSku) {
-        // ลองดูว่าใน productName มีคำที่ตรงกับ SKU/Unit ของ variant ไหม
-        v = varRows.find(
-          (vr) =>
-            productName.toLowerCase().includes(vr.sku?.toLowerCase()) ||
-            productName.toLowerCase().includes(vr.unit?.toLowerCase()),
-        );
+      // ใช้ระบบ Scoring สำหรับ Variant โดยดูจากเป้าหมาย (variantSku หรือส่วนขยายใน productName)
+      const targetTerm = (variantSku || productName).toLowerCase();
+      const keywords = targetTerm.split(/[\s-]+/).filter(w => w.length > 0);
 
-        if (!v) {
-          const options = varRows
-            .map(
-              (vr) =>
-                `${vr.unit || vr.sku || "ปกติ"} (${parseFloat(vr.price)}฿)`,
-            )
-            .join(", ");
-          return {
-            success: false,
-            message: `"${prod.name}" มีหลายรูปแบบ กรุณาเลือก: ${options}`,
-          };
-        }
+      const scoredVariants = varRows.map(vr => {
+        let score = 0;
+        const sku = (vr.sku || "").toLowerCase();
+        const unit = (vr.unit || "").toLowerCase();
+
+        // กฎการให้คะแนน:
+        // +100 ถ้าตรงกับ SKU เป๊ะๆ (กรณี AI ส่ง SKU มาตรง)
+        if (variantSku && sku === variantSku.toLowerCase()) score += 100;
+        // +50 ถ้าตรงกับ Unit เป๊ะๆ
+        if (variantSku && unit === variantSku.toLowerCase()) score += 50;
+
+        // ให้คะแนนตาม Keyword ที่ตรง
+        keywords.forEach(kw => {
+          if (sku.includes(kw)) score += 10;
+          if (unit.includes(kw)) score += 10;
+          // กรณีพิเศษ: ถ้าเป็นตัวเลข (เช่น แพ็ค 6) ให้ความสำคัญสูงขึ้น
+          if (/^\d+$/.test(kw)) {
+             if (sku.includes(kw) || unit.includes(kw)) score += 20;
+          }
+        });
+
+        return { ...vr, score };
+      }).filter(v => v.score > 0).sort((a, b) => b.score - a.score);
+
+      if (scoredVariants.length > 0) {
+        bestVariant = scoredVariants[0];
       } else {
-        // Try to match sku
-        v = varRows.find(
-          (vr) =>
-            (vr.sku &&
-              vr.sku.toLowerCase().includes(variantSku.toLowerCase())) ||
-            (vr.unit &&
-              vr.unit.toLowerCase().includes(variantSku.toLowerCase())),
-        );
-        if (!v) {
-          const options = varRows
-            .map(
-              (vr) =>
-                `${vr.unit || vr.sku || "ปกติ"} (${parseFloat(vr.price)}฿)`,
-            )
-            .join(", ");
-          return {
-            success: false,
-            message: `ไม่พบลักษณะ "${variantSku}" สำหรับ "${prod.name}" กรุณาเลือก: ${options}`,
-          };
-        }
+        const options = varRows.map(vr => `${vr.unit || vr.sku || "ปกติ"} (฿${parseFloat(vr.price)})`).join(", ");
+        return {
+          success: false,
+          message: `พบสินค้า "${prod.name}" แต่ระบุตัวเลือกไม่ชัดเจน กรุณาเลือก: ${options}`,
+        };
       }
     }
 
-    if (v.stock_quantity < qty) {
+    if (bestVariant.stock_quantity < qty) {
       return {
         success: false,
-        message: `"${prod.name}" มีสต็อกเพียง ${v.stock_quantity} ${v.unit || "ชิ้น"} ไม่เพียงพอ`,
+        message: `"${prod.name}" (${bestVariant.unit || bestVariant.sku}) มีสต็อกเพียง ${bestVariant.stock_quantity} ไม่เพียงพอ`,
       };
     }
 
-    // Add to Database cart
-    await cartRepo.addItem(userId, v.variant_id, qty);
+    // 3. บันทึกลงตะกร้า
+    await cartRepo.addItem(userId, bestVariant.variant_id, qty);
 
-    const total = (parseFloat(v.price) * qty).toFixed(0);
     return {
       success: true,
-      message: `"${prod.name}" × ${qty} ${v.unit || "ชิ้น"} ราคา ฿${total} — (เพิ่มลงตะกร้าของระบบเรียบร้อยแล้ว)`,
-      __action: {
-        type: "refresh_cart_trigger", // trigger frontend to reload cart
-        product_name: prod.name,
-      },
+      message: `"${prod.name}" × ${qty} (${bestVariant.unit || "ปกติ"}) ราคา ฿${(parseFloat(bestVariant.price) * qty).toFixed(0)} เพิ่มลงตะกร้าเรียบร้อยแล้ว`,
+      __action: { type: "refresh_cart_trigger", product_name: prod.name },
     };
   } catch (err) {
     console.error("[toolAddProductByName]", err.message);
-    return { error: err.message };
+    return { success: false, message: "เกิดข้อผิดพลาดในการโหลดข้อมูล/บันทึกลงตะกร้า: " + err.message };
+  }
+};
+
+/**
+ * toolUpdateCartQuantity: อัพเดทจำนวนสินค้าในตะกร้า (Database Sync)
+ */
+const toolUpdateCartQuantity = async (userId, productName, quantity, variantSku = "") => {
+  try {
+    if (!userId) return { success: false, message: "กรุณาล็อกอินก่อนแก้ไขตะกร้า" };
+    const qty = Math.max(1, parseInt(quantity) || 1);
+
+    // 1. ค้นหาสินค้า (ใช้ logic เดียวกับตอนเพิ่ม)
+    let { rows: prodRows } = await db.query(
+      `SELECT p.product_id, p.name FROM products p WHERE LOWER(p.name) LIKE LOWER($1) AND p.is_active = true LIMIT 1`,
+      [`%${productName}%`]
+    );
+    if (!prodRows.length) return { success: false, message: `ไม่พบสินค้า "${productName}" เพื่ออัพเดทจำนวน` };
+
+    const prod = prodRows[0];
+    const { rows: varRows } = await db.query(
+      `SELECT variant_id, sku, unit, price FROM product_variants WHERE product_id = $1 AND is_active = true`,
+      [prod.product_id]
+    );
+    if (!varRows.length) return { success: false, message: `"${prod.name}" ไม่มีตัวเลือกสินค้า` };
+
+    // 2. ค้นหา Variant ที่จะอัพเดท (Scoring)
+    const targetTerm = (variantSku || productName).toLowerCase();
+    const keywords = targetTerm.split(/[\s-]+/).filter(w => w.length > 0);
+    const scoredVariants = varRows.map(vr => {
+      let score = 0;
+      const sku = (vr.sku || "").toLowerCase();
+      const unit = (vr.unit || "").toLowerCase();
+      if (variantSku && sku === variantSku.toLowerCase()) score += 100;
+      keywords.forEach(kw => { if (sku.includes(kw) || unit.includes(kw)) score += 10; });
+      return { ...vr, score };
+    }).filter(v => v.score > 0).sort((a, b) => b.score - a.score);
+
+    const bestVariant = scoredVariants.length > 0 ? scoredVariants[0] : varRows[0];
+
+    // 3. อัพเดท Database
+    await cartRepo.updateItemQuantity(userId, bestVariant.variant_id, qty);
+
+    return {
+      success: true,
+      message: `อัพเดทจำนวน "${prod.name}" (${bestVariant.unit || "ปกติ"}) เป็น ${qty} ชิ้นเรียบร้อยแล้วค่ะ`,
+      __action: { type: "refresh_cart_trigger", product_name: prod.name }
+    };
+  } catch (err) {
+    console.error("[toolUpdateCartQuantity]", err.message);
+    return { success: false, message: "เกิดข้อผิดพลาด: " + err.message };
   }
 };
 
@@ -614,15 +628,15 @@ const makeExecuteTool =
         };
         break;
       case "update_cart_quantity":
-        actionsOut.push({
-          type: "update_item_quantity",
-          product_name: args.product_name || args.name,
-          quantity: args.quantity,
-        });
-        result = {
-          success: true,
-          message: `ทำการสั่งหน้าเว็บให้อัพเดทจำนวน ${args.product_name} เป็น ${args.quantity} ชิ้นแล้ว`,
-        };
+        result = await toolUpdateCartQuantity(
+          userId,
+          args.product_name || args.name || "",
+          args.quantity,
+          args.variant_sku || ""
+        );
+        if (result.success && result.__action) {
+          actionsOut.push(result.__action);
+        }
         break;
       case "checkout_order_in_chatbot":
         result = await toolCheckoutOrderInChatbot(
