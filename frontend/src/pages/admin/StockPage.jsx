@@ -27,11 +27,9 @@ const StockBadge = ({ qty, threshold }) => {
 };
 
 const REASONS = [
-    { value: 'restock', label: '📦 รับสินค้าเข้า (Restock)', sign: 'positive' },
-    { value: 'adjustment', label: '🔧 ปรับปรุงสต็อก (Adjustment)', sign: 'any' },
-    { value: 'lost', label: '❌ สูญหาย / ชำรุด (Loss)', sign: 'negative' },
-    { value: 'return', label: '↩️ รับคืนจากลูกค้า (Return)', sign: 'positive' },
-    { value: 'sale_correction', label: '🛒 แก้ไขจากการขาย (Sale Fix)', sign: 'any' },
+    { value: 'add', label: '📥 เพิ่มสต็อก (รับสินค้าเข้า)', sign: 'positive' },
+    { value: 'set', label: '🔧 ปรับจำนวน (นับจำนวนใหม่)', sign: 'any' },
+    { value: 'remove', label: '📤 นำสินค้าออก (สูญหาย/ชำรุด)', sign: 'negative' },
 ];
 
 const formatDate = (d) => {
@@ -76,7 +74,7 @@ const HistoryDrawer = ({ variant, onClose }) => {
                             <p>ยังไม่มีประวัติการปรับสต็อก</p>
                         </div>
                     ) : (
-                        history.map(h => (
+                        history.filter(h => h.transaction_type !== 'purchase').map(h => (
                             <div key={h.id} className={`history-item ${h.quantity_change >= 0 ? 'pos' : 'neg'}`}>
                                 <div className={`history-delta ${h.quantity_change >= 0 ? 'pos' : 'neg'}`}>
                                     {h.quantity_change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
@@ -85,7 +83,14 @@ const HistoryDrawer = ({ variant, onClose }) => {
                                 <div className="history-info">
                                     <div className="history-notes">{h.notes || h.transaction_type}</div>
                                     <div className="history-meta">
-                                        {h.quantity_before} → {h.quantity_after} · {formatDate(h.created_at)}
+                                        <span>{h.quantity_before} → {h.quantity_after}</span>
+                                        <span className="dot">·</span>
+                                        <span>{formatDate(h.created_at)}</span>
+                                        {(h.performed_by_name || h.performed_by_phone) && (
+                                            <span className="history-admin-badge" title={h.performed_by_phone}>
+                                                👤 {h.performed_by_name || h.performed_by_phone}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -100,7 +105,7 @@ const HistoryDrawer = ({ variant, onClose }) => {
 /* ─── Adjust Modal (single item) ────────────────────── */
 const AdjustModal = ({ variant, onClose, onSuccess }) => {
     const [inputValue, setInputValue] = useState(0);
-    const [reason, setReason] = useState('restock');
+    const [reason, setReason] = useState('add');
     const [saving, setSaving] = useState(false);
     const [summaryResult, setSummaryResult] = useState(null);
     const [inputError, setInputError] = useState('');
@@ -109,10 +114,10 @@ const AdjustModal = ({ variant, onClose, onSuccess }) => {
 
     const calculateDelta = () => {
         const val = Number(inputValue);
-        if (reason === 'adjustment' || reason === 'sale_correction') {
+        if (reason === 'set') {
             return val - currentQty;
         }
-        if (reason === 'lost') {
+        if (reason === 'remove') {
             return -Math.abs(val);
         }
         return Math.abs(val);
@@ -126,7 +131,7 @@ const AdjustModal = ({ variant, onClose, onSuccess }) => {
         }
         
         const delta = calculateDelta();
-        if (delta === 0 && (reason !== 'adjustment' && reason !== 'sale_correction')) {
+        if (delta === 0 && reason !== 'set') {
             setInputError('กรุณาระบุจำนวนที่ต้องการปรับ');
             return;
         }
@@ -171,8 +176,8 @@ const AdjustModal = ({ variant, onClose, onSuccess }) => {
     // Dynamic labels based on reason
     const getLabels = () => {
         switch(reason) {
-            case 'adjustment': return { input: 'จำนวนที่นับได้จริง (สต็อกใหม่)', btn: 'ปรับเป็น', icon: <History size={15} /> };
-            case 'lost': return { input: 'จำนวนที่หาย/ชำรุด (-)', btn: 'บันทึกการหาย', icon: <TrendingDown size={15} /> };
+            case 'set': return { input: 'จำนวนที่นับได้จริง (สต็อกใหม่)', btn: 'ปรับเป็น', icon: <History size={15} /> };
+            case 'remove': return { input: 'จำนวนที่นำออก (-)', btn: 'บันทึกการนำออก', icon: <TrendingDown size={15} /> };
             default: return { input: 'จำนวนที่เพิ่มเข้า (+)', btn: 'บันทึกรับเข้า', icon: <TrendingUp size={15} /> };
         }
     };
@@ -256,7 +261,7 @@ const AdjustModal = ({ variant, onClose, onSuccess }) => {
                             onClick={handleSave} disabled={saving}>
                             {saving
                                 ? <div className="spinner" style={{ width: 16, height: 16 }} />
-                                : <>{labels.icon} {labels.btn} {reason === 'adjustment' ? inputValue : (reason === 'lost' ? `-${inputValue}` : `+${inputValue}`)}</>}
+                                : <>{labels.icon} {labels.btn} {reason === 'set' ? inputValue : (reason === 'remove' ? `-${inputValue}` : `+${inputValue}`)}</>}
                         </button>
                     </div>
                 </div>
@@ -305,7 +310,7 @@ const SummaryModal = ({ results, onClose }) => {
                                     </td>
                                     <td style={{
                                         textAlign: 'center', fontWeight: 800,
-                                        color: r.ok ? 'rgba(255,255,255,0.9)' : '#f87171'
+                                        color: r.ok ? 'rgba(31, 30, 30, 0.9)' : '#f87171'
                                     }}>
                                         {r.ok ? r.after : '—'}
                                     </td>
@@ -313,9 +318,24 @@ const SummaryModal = ({ results, onClose }) => {
                                         {r.ok
                                             ? <span className="badge badge-green">สำเร็จ</span>
                                             : (
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                                                     <span className="badge badge-red">ผิดพลาด</span>
-                                                    {r.error && <div style={{ fontSize: 10, color: '#f87171', maxWidth: 100, lineHeight: 1.2 }}>{r.error}</div>}
+                                                    {r.error && (
+                                                        <div style={{ 
+                                                            fontSize: 11, 
+                                                            color: '#f87171', 
+                                                            maxWidth: 240, 
+                                                            lineHeight: 1.4,
+                                                            textAlign: 'center',
+                                                            wordBreak: 'break-word',
+                                                            background: 'rgba(248, 113, 113, 0.05)',
+                                                            padding: '4px 8px',
+                                                            borderRadius: '6px',
+                                                            marginTop: '4px'
+                                                        }}>
+                                                            {r.error}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                     </td>
@@ -341,7 +361,7 @@ const BulkModal = ({ selected, onClose, onSuccess }) => {
         selected.forEach(v => { init[v.variant_id] = 0; });
         return init;
     });
-    const [reason, setReason] = useState('restock');
+    const [reason, setReason] = useState('add');
     const [saving, setSaving] = useState(false);
     const [summaryResults, setSummaryResults] = useState(null);
 
@@ -356,7 +376,7 @@ const BulkModal = ({ selected, onClose, onSuccess }) => {
 
     const handleSave = async () => {
         // ★ UAT: all deltas = 0 must be blocked — no API call
-        if (affectedCount === 0) {
+        if (affectedCount === 0 && reason !== 'set') {
             toast.error('กรุณาระบุจำนวนที่ต้องการปรับอย่างน้อย 1 รายการ');
             return; // no API call
         }
@@ -365,14 +385,19 @@ const BulkModal = ({ selected, onClose, onSuccess }) => {
         const results = [];
         await Promise.all(
             selected.map(async v => {
-                const d = deltas[v.variant_id] ?? 0;
-                if (d === 0) {
+                const d = deltas[v.variant_id];
+                if (d === undefined || (d === 0 && reason !== 'set')) {
                     results.push({ product_name: v.product_name, sku: v.sku, before: v.stock_quantity, delta: 0, after: v.stock_quantity, ok: true });
                     return;
                 }
                 try {
-                    await adjustStock(v.variant_id, d, reasonLabel);
-                    results.push({ product_name: v.product_name, sku: v.sku, before: v.stock_quantity, delta: d, after: Math.max(0, (v.stock_quantity ?? 0) + d), ok: true });
+                    const finalDelta = reason === 'set' ? (d - (v.stock_quantity || 0)) : d;
+                    if (finalDelta === 0 && reason !== 'set') {
+                        results.push({ product_name: v.product_name, sku: v.sku, before: v.stock_quantity, delta: 0, after: v.stock_quantity, ok: true });
+                        return;
+                    }
+                    await adjustStock(v.variant_id, finalDelta, reasonLabel);
+                    results.push({ product_name: v.product_name, sku: v.sku, before: v.stock_quantity, delta: finalDelta, after: Math.max(0, (v.stock_quantity ?? 0) + finalDelta), ok: true });
                 } catch (err) {
                     const errMsg = err.response?.data?.message || 'เกิดข้อผิดพลาด';
                     results.push({ product_name: v.product_name, sku: v.sku, before: v.stock_quantity, delta: d, after: null, ok: false, error: errMsg });
@@ -380,7 +405,7 @@ const BulkModal = ({ selected, onClose, onSuccess }) => {
             })
         );
         setSaving(false);
-        setSummaryResults(results.filter(r => r.delta !== 0));
+        setSummaryResults(results.filter(r => r.delta !== 0 || reason === 'set'));
         onSuccess();
     };
 
@@ -412,13 +437,19 @@ const BulkModal = ({ selected, onClose, onSuccess }) => {
 
                     {/* Quick Apply All */}
                     <div style={{ marginBottom: 14 }}>
-                        <div className="stock-preset-label" style={{ marginBottom: 6 }}>ปรับทุกรายการพร้อมกัน</div>
+                        <div className="stock-preset-label" style={{ marginBottom: 6 }}>
+                            {reason === 'set' ? 'ตั้งค่าจำนวนทั้งหมดเป็น' : reason === 'remove' ? 'นำออกทั้งหมดรายการละ' : 'เพิ่มเข้าทั้งหมดรายการละ'}
+                        </div>
                         <div className="stock-preset-row" style={{ flexWrap: 'wrap' }}>
                             {[1, 5, 10, 20, 50, 100].map(n => (
-                                <button key={n} type="button" className="btn btn-outline btn-sm" onClick={() => applyAll(n)}>+{n}</button>
+                                <button key={n} type="button" className="btn btn-outline btn-sm" onClick={() => applyAll(reason === 'remove' ? -n : n)}>
+                                    {reason === 'set' ? n : (reason === 'remove' ? `-${n}` : `+${n}`)}
+                                </button>
                             ))}
-                            {[-1, -5, -10].map(n => (
-                                <button key={n} type="button" className="btn btn-outline btn-sm stock-preset-minus" onClick={() => applyAll(n)}>{n}</button>
+                            {reason !== 'set' && [-1, -5, -10].map(n => (
+                                <button key={n} type="button" className="btn btn-outline btn-sm stock-preset-minus" onClick={() => applyAll(reason === 'remove' ? Math.abs(n) : n)}>
+                                    {reason === 'remove' ? `+${Math.abs(n)}` : n}
+                                </button>
                             ))}
                             <button type="button" className="btn btn-secondary btn-sm" onClick={() => applyAll(0)}>รีเซ็ตทั้งหมด</button>
                         </div>
@@ -431,7 +462,7 @@ const BulkModal = ({ selected, onClose, onSuccess }) => {
                                 <tr>
                                     <th>สินค้า</th>
                                     <th style={{ textAlign: 'center', width: 90 }}>สต็อกปัจจุบัน</th>
-                                    <th style={{ textAlign: 'center', width: 160 }}>ปรับจำนวน</th>
+                                    <th style={{ textAlign: 'center', width: 160 }}>{reason === 'set' ? 'กำหนดจำนวน' : 'ปรับจำนวน'}</th>
                                     <th style={{ textAlign: 'center', width: 100 }}>หลังปรับ</th>
                                 </tr>
                             </thead>
@@ -500,7 +531,7 @@ const StockPage = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [filterLow, setFilterLow] = useState(false);
+    const [filterStockState, setFilterStockState] = useState('all'); // all, low, out
     const [filterCategory, setFilterCategory] = useState('');
     const [adjustTarget, setAdjustTarget] = useState(null);
     const [historyTarget, setHistoryTarget] = useState(null);
@@ -535,8 +566,12 @@ const StockPage = () => {
         const matchSearch =
             (v.product_name || '').toLowerCase().includes(q) ||
             (v.sku || '').toLowerCase().includes(q);
-        const matchLow = !filterLow || stockLevel(v.stock_quantity, v.low_stock_threshold) !== 'ok';
-        return matchSearch && matchLow;
+        const matchStock = (() => {
+            if (filterStockState === 'low') return stockLevel(v.stock_quantity, v.low_stock_threshold) === 'low';
+            if (filterStockState === 'out') return v.stock_quantity === 0;
+            return true;
+        })();
+        return matchSearch && matchStock;
     });
 
     // Stats
@@ -601,14 +636,6 @@ const StockPage = () => {
                             className="admin-search-input"
                         />
                     </div>
-                    <button
-                        className={`btn btn-sm ${filterLow ? 'btn-warning' : 'btn-secondary'}`}
-                        onClick={() => setFilterLow(f => !f)}
-                        title="แสดงเฉพาะสต็อกต่ำ"
-                    >
-                        <AlertTriangle size={14} />
-                        {filterLow ? 'สต็อกต่ำ' : 'ทั้งหมด'}
-                    </button>
                     <button className="btn btn-secondary btn-sm" onClick={fetchVariants} title="รีเฟรช">
                         <RotateCcw size={14} />
                     </button>
@@ -617,28 +644,34 @@ const StockPage = () => {
 
             {/* ── Stats Bar ── */}
             <div className="stock-stats-bar">
-                <div className="stock-stat-card">
+                <div className={`stock-stat-card ${filterStockState === 'all' ? 'active' : ''}`}
+                    onClick={() => { setFilterStockState('all'); setSelected(new Set()); }}
+                    style={{ cursor: 'pointer' }}>
                     <Package size={20} className="stat-icon stat-icon-blue" />
                     <div>
                         <div className="stat-val">{totalSku}</div>
                         <div className="stat-lbl">Total SKUs</div>
                     </div>
                 </div>
-                <div className="stock-stat-card">
+                <div className={`stock-stat-card ${filterStockState === 'low' ? 'active' : ''}`}
+                    onClick={() => { setFilterStockState('low'); setSelected(new Set()); }}
+                    style={{ cursor: 'pointer' }}>
                     <AlertTriangle size={20} className="stat-icon stat-icon-orange" />
                     <div>
                         <div className="stat-val" style={{ color: lowStock > 0 ? '#fb923c' : 'inherit' }}>{lowStock}</div>
                         <div className="stat-lbl">Low Stock</div>
                     </div>
                 </div>
-                <div className="stock-stat-card">
+                <div className={`stock-stat-card ${filterStockState === 'out' ? 'active' : ''}`}
+                    onClick={() => { setFilterStockState('out'); setSelected(new Set()); }}
+                    style={{ cursor: 'pointer' }}>
                     <PackageX size={20} className="stat-icon stat-icon-red" />
                     <div>
                         <div className="stat-val" style={{ color: outOfStock > 0 ? '#f87171' : 'inherit' }}>{outOfStock}</div>
                         <div className="stat-lbl">Out of Stock</div>
                     </div>
                 </div>
-                <div className="stock-stat-card">
+                <div className="stock-stat-card" style={{ cursor: 'default' }}>
                     <TrendingUp size={20} className="stat-icon stat-icon-green" />
                     <div>
                         <div className="stat-val">{variants.reduce((s, v) => s + (v.stock_quantity || 0), 0).toLocaleString()}</div>

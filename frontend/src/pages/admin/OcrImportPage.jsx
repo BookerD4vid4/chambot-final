@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, ScanLine, CheckCircle, XCircle, AlertTriangle, Edit3, Save, Trash2, ChevronRight, RotateCcw, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Upload, ScanLine, CheckCircle, XCircle, AlertTriangle, Edit3, Save, Trash2, ChevronRight, ChevronLeft, RotateCcw, Eye } from 'lucide-react';
 import { ocrScan, createProduct, adjustStock, getCategories } from '../../api';
 import API from '../../api';
 import toast from 'react-hot-toast';
@@ -182,9 +183,14 @@ const OcrImportPage = () => {
     return (
         <div>
             <div className="admin-page-header">
-                <div>
-                    <h1 className="admin-page-title">📷 OCR นำเข้าสินค้า</h1>
-                    <p className="admin-page-subtitle">วิเคราะห์รูปภาพด้วย Gemini AI เพื่อเพิ่มสินค้าอัตโนมัติ</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <Link to="/admin/products" className="btn btn-secondary btn-sm" style={{ padding: 8 }}>
+                        <ChevronLeft size={20} />
+                    </Link>
+                    <div>
+                        <h1 className="admin-page-title">📷 OCR นำเข้าสินค้า</h1>
+                        <p className="admin-page-subtitle">วิเคราะห์รูปภาพด้วย Gemini AI เพื่อเพิ่มสินค้าอัตโนมัติ</p>
+                    </div>
                 </div>
                 {step > 1 && (
                     <button className="btn btn-secondary" onClick={reset}><RotateCcw size={14} /> เริ่มใหม่</button>
@@ -483,7 +489,7 @@ const OcrImportPage = () => {
                             </div>
                             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
                                 <button className="btn btn-secondary" onClick={reset}><RotateCcw size={14} /> นำเข้าใหม่</button>
-                                <a href="/admin/products" className="btn btn-primary">ดูรายการสินค้า →</a>
+                                <Link to="/admin/products" className="btn btn-primary">ดูรายการสินค้า →</Link>
                             </div>
                         </div>
                     )}

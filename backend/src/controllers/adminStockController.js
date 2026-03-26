@@ -9,7 +9,7 @@ const fail = (res, err) => res.status(err.status || 500).json({ success: false, 
  */
 const restock = async (req, res) => {
     try {
-        const data = await stockSvc.restock(req.body);
+        const data = await stockSvc.restock(req.body, req.user?.id);
         ok(res, data);
     } catch (e) { fail(res, e); }
 };
@@ -20,7 +20,7 @@ const restock = async (req, res) => {
  */
 const adjust = async (req, res) => {
     try {
-        const data = await stockSvc.adjust(req.body);
+        const data = await stockSvc.adjust(req.body, req.user?.id);
         ok(res, data);
     } catch (e) { fail(res, e); }
 };
@@ -31,7 +31,7 @@ const adjust = async (req, res) => {
  */
 const cancel = async (req, res) => {
     try {
-        const data = await stockSvc.cancel(req.body);
+        const data = await stockSvc.cancel(req.body, req.user?.id);
         ok(res, data);
     } catch (e) { fail(res, e); }
 };

@@ -44,12 +44,13 @@ export const updateProduct = (id, data) => API.put(`/products/${id}`, data);
 export const deleteProduct = (id) => API.delete(`/products/${id}`);
 export const getLowStockProducts = () => API.get('/products/alerts/low-stock');
 export const getAllVariants = (params = {}) => API.get('/products/variants', { params });
-export const adjustStock = (variantId, delta, reason) => API.patch(`/products/variants/${variantId}/stock`, { delta, reason });
+export const adjustStock = (variant_id, delta, reason, notes = '') =>
+    API.post('/admin/stock/adjust', { variant_id, delta, reason, notes });
 export const updateVariantThreshold = (variantId, low_stock_threshold) =>
-    API.patch(`/products/variants/${variantId}/stock`, { delta: 0, low_stock_threshold });
-export const setMainVariant = (variantId) => API.patch(`/products/variants/${variantId}/set-main`);
-export const getStockHistory = (variantId) => API.get(`/products/variants/${variantId}/history`);
-export const getAllStockHistory = (limit = 50) => API.get('/products/variants/history', { params: { limit } });
+    API.patch(`/admin/products/variants/${variantId}/stock`, { delta: 0, low_stock_threshold });
+export const setMainVariant = (variantId) => API.patch(`/admin/products/variants/${variantId}/set-main`);
+export const getStockHistory = (variantId) => API.get(`/admin/stock/history/${variantId}`);
+export const getAllStockHistory = (limit = 50) => API.get('/admin/stock/history', { params: { limit } });
 
 // ─── Categories ─────────────────────────────────────────
 export const getCategories = () => API.get('/categories');

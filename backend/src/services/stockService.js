@@ -10,7 +10,7 @@ const VALID_TYPES = ['restock', 'adjustment', 'cancel', 'purchase'];
 /**
  * Internal: apply a stock change inside an EXISTING transaction (BEGIN already called).
  */
-const _applyChange = async (client, variantId, delta, txType, notes, referenceOrderId = null) => {
+const _applyChange = async (client, variantId, delta, txType, notes, performedBy = null, referenceOrderId = null) => {
     // 1. Get current stock with row lock
     const lockRes = await client.query(
         'SELECT stock_quantity, low_stock_threshold, sku FROM product_variants WHERE variant_id = $1 FOR UPDATE',
@@ -35,13 +35,13 @@ const _applyChange = async (client, variantId, delta, txType, notes, referenceOr
         `UPDATE product_variants SET stock_quantity = $1, updated_at = NOW() WHERE variant_id = $2`,
         [after, variantId]
     );
-
+ 
     // 3. Record transaction
     await client.query(
         `INSERT INTO inventory_transactions
-            (variant_id, quantity_before, quantity_changed, quantity_after, transaction_type, reference_order_id, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [variantId, before, delta, after, txType, referenceOrderId || null, notes || null]
+            (variant_id, quantity_before, quantity_changed, quantity_after, transaction_type, reference_order_id, performed_by, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [variantId, before, delta, after, txType, referenceOrderId || null, performedBy || null, notes || null]
     );
 
     // 4. Trigger Low Stock Alert (Async Fire & Forget)
@@ -60,7 +60,7 @@ const { pool } = require('../config/supabaseClient');
  * Restock: add positive quantity.
  * Body: [{ variant_id, quantity, notes? }, ...]  OR single object
  */
-const restock = async (items) => {
+const restock = async (items, performedBy = null) => {
     const list = Array.isArray(items) ? items : [items];
     if (!list.length) throw Object.assign(new Error('No items provided'), { status: 400 });
 
@@ -73,7 +73,7 @@ const restock = async (items) => {
             if (!variant_id) throw Object.assign(new Error('variant_id is required'), { status: 400 });
             const qty = Number(quantity);
             if (!qty || qty <= 0) throw Object.assign(new Error(`quantity must be a positive number`), { status: 400 });
-            const r = await _applyChange(client, variant_id, qty, 'restock', notes || 'Manual restock');
+            const r = await _applyChange(client, variant_id, qty, 'restock', notes || 'Manual restock', performedBy);
             results.push(r);
         }
         await client.query('COMMIT');
@@ -90,7 +90,7 @@ const restock = async (items) => {
  * Adjust: positive or negative delta — for corrections/losses/returns.
  * transaction_type resolved from the sign and reason.
  */
-const adjust = async (items) => {
+const adjust = async (items, performedBy = null) => {
     const list = Array.isArray(items) ? items : [items];
     if (!list.length) throw Object.assign(new Error('No items provided'), { status: 400 });
 
@@ -110,7 +110,7 @@ const adjust = async (items) => {
             else if (reason === 'purchase') txType = 'purchase';
             else if (reason === 'restock') txType = 'restock';
 
-            const r = await _applyChange(client, variant_id, d, txType, notes || reason || 'Manual adjustment');
+            const r = await _applyChange(client, variant_id, d, txType, notes || reason || 'Manual adjustment', performedBy);
             results.push(r);
         }
         await client.query('COMMIT');
@@ -126,7 +126,7 @@ const adjust = async (items) => {
 /**
  * Cancel: deduct stock for a cancelled order (positive quantity = amount to deduct).
  */
-const cancel = async (items) => {
+const cancel = async (items, performedBy = null) => {
     const list = Array.isArray(items) ? items : [items];
     const client = await pool.connect();
     try {
@@ -137,7 +137,7 @@ const cancel = async (items) => {
             if (!variant_id) throw Object.assign(new Error('variant_id is required'), { status: 400 });
             const qty = Number(quantity);
             if (!qty || qty <= 0) throw Object.assign(new Error('quantity must be positive'), { status: 400 });
-            const r = await _applyChange(client, variant_id, -qty, 'cancel', notes || 'Order cancelled', reference_order_id);
+            const r = await _applyChange(client, variant_id, -qty, 'cancel', notes || 'Order cancelled', performedBy, reference_order_id);
             results.push(r);
         }
         await client.query('COMMIT');
@@ -191,12 +191,17 @@ const getHistory = async (variantId = null, limit = 50) => {
             it.transaction_type,
             it.reference_order_id,
             it.notes,
+            it.quantity_before,
+            it.quantity_after,
             it.created_at,
             pv.sku,
-            p.name AS product_name
+            p.name AS product_name,
+            u.phone_number AS performed_by_phone,
+            u.full_name AS performed_by_name
          FROM inventory_transactions it
          JOIN product_variants pv ON it.variant_id = pv.variant_id
          JOIN products p ON pv.product_id = p.product_id
+         LEFT JOIN users u ON it.performed_by = u.id
          ${where}
          ORDER BY it.created_at DESC
          LIMIT $${params.length}`,
@@ -206,17 +211,16 @@ const getHistory = async (variantId = null, limit = 50) => {
 };
 
 /**
- * Deduct stock when an order is marked as SHIPPED.
- * Steps (all inside a single DB transaction):
+ * Deduct stock and release reservation when an order is marked as DELIVERED.
+ * Steps:
  *   1. Read order_items for the given orderId
  *   2. For each item: deduct stock_quantity, write inventory_transaction (type='purchase')
  *   3. Reduce reserved_quantity on product_variants
- *   4. Mark stock_reservations rows as released (released_at = NOW())
  *
  * @param {number|string} orderId
  * @param {object} [externalClient]  - optional pg client if already inside a transaction
  */
-const deductStockOnShipped = async (orderId, externalClient = null) => {
+const deductStockOnDelivered = async (orderId, externalClient = null) => {
     const client = externalClient || await pool.connect();
     const ownTransaction = !externalClient;
 
@@ -233,7 +237,7 @@ const deductStockOnShipped = async (orderId, externalClient = null) => {
         );
 
         if (itemsRes.rows.length === 0) {
-            console.warn(`[stockService] deductStockOnShipped: no items found for order #${orderId}`);
+            console.warn(`[stockService] deductStockOnDelivered: no items found for order #${orderId}`);
             if (ownTransaction) await client.query('COMMIT');
             return [];
         }
@@ -247,7 +251,7 @@ const deductStockOnShipped = async (orderId, externalClient = null) => {
                 variant_id,
                 -quantity,
                 'purchase',
-                `ขายออก — Order #${orderId}`,
+                `ขายออก (จัดส่งสำเร็จ) — Order #${orderId}`,
                 orderId
             );
             results.push(r);
@@ -264,15 +268,52 @@ const deductStockOnShipped = async (orderId, externalClient = null) => {
 
         if (ownTransaction) await client.query('COMMIT');
 
-        console.log(`[stockService] ✅ deductStockOnShipped: order #${orderId} — ${results.length} variant(s) deducted`);
+        console.log(`[stockService] ✅ deductStockOnDelivered: order #${orderId} — ${results.length} variant(s) deducted`);
         return results;
     } catch (e) {
         if (ownTransaction) await client.query('ROLLBACK');
-        console.error(`[stockService] ❌ deductStockOnShipped failed for order #${orderId}:`, e.message);
+        console.error(`[stockService] ❌ deductStockOnDelivered failed for order #${orderId}:`, e.message);
         throw e;
     } finally {
         if (ownTransaction) client.release();
     }
 };
 
-module.exports = { restock, adjust, cancel, getLowStock, getHistory, deductStockOnShipped };
+/**
+ * Release reserved stock when an order is CANCELLED.
+ * (Only reduces reserved_quantity, doesn't touch stock_quantity).
+ */
+const releaseStockOnCancelled = async (orderId, externalClient = null) => {
+    const client = externalClient || await pool.connect();
+    const ownTransaction = !externalClient;
+
+    try {
+        if (ownTransaction) await client.query('BEGIN');
+
+        const itemsRes = await client.query(
+            `SELECT variant_id, quantity FROM order_items WHERE order_id = $1 AND variant_id IS NOT NULL`,
+            [orderId]
+        );
+
+        for (const { variant_id, quantity } of itemsRes.rows) {
+            await client.query(
+                `UPDATE product_variants
+                 SET reserved_quantity = GREATEST(0, reserved_quantity - $1),
+                     updated_at = NOW()
+                 WHERE variant_id = $2`,
+                [quantity, variant_id]
+            );
+        }
+
+        if (ownTransaction) await client.query('COMMIT');
+        console.log(`[stockService] 🔓 releaseStockOnCancelled: order #${orderId} — reservations released`);
+    } catch (e) {
+        if (ownTransaction) await client.query('ROLLBACK');
+        console.error(`[stockService] ❌ releaseStockOnCancelled failed for order #${orderId}:`, e.message);
+        throw e;
+    } finally {
+        if (ownTransaction) client.release();
+    }
+};
+
+module.exports = { restock, adjust, cancel, getLowStock, getHistory, deductStockOnDelivered, releaseStockOnCancelled };

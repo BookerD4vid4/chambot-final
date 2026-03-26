@@ -78,6 +78,13 @@
     box-shadow: var(--shadow-md);
 }
 
+.stock-stat-card.active {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    box-shadow: 0 0 15px var(--accent-glow);
+    transform: translateY(-2px);
+}
+
 .stat-icon {
     opacity: 0.8;
     flex-shrink: 0;
@@ -461,8 +468,24 @@
 .history-meta {
     font-size: 11px;
     color: var(--text-muted);
-    margin-top: 3px;
+    margin-top: 4px;
     font-family: monospace;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.history-admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(170, 93, 198, 0.08);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    border: 1px solid rgba(170, 93, 198, 0.15);
 }
 
 .history-empty {
